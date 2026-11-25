@@ -1,6 +1,6 @@
 # Benchmarks
 
-`bench_gpu.py` loads each local model one at a time and writes what it cost to
+`bench_gpu.py` loads each local model (embedder, reranker, NLI) one at a time and writes what it cost to
 `results/`. I ran it before settling the stack, because the laptop has about
 7.4 GB of RAM and I didn't want to find out mid-build that the NLI model doesn't fit.
 

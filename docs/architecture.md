@@ -1,7 +1,53 @@
 # Architecture
 
-The full request flow gets written up once Part 2 is built. This page starts with
-ingestion, because everything downstream depends on it.
+## A request, step by step
+
+1. **Input guard.** The question is coerced to text, whitespace is collapsed and it
+   is cut to 1,000 characters. Empty questions are refused. A question is treated
+   as non-English when fewer than half its words are English stopwords or words that
+   occur in the corpus.
+2. **G2, false premise.** Flags (`--x`), CamelCase identifiers and backticked tokens
+   in the question are looked up in `index/term_index.json`, which lists every such
+   term in both releases. Any miss means a refusal that names the term.
+3. **Retrieval.** For each release separately: BM25 top 30 and dense top 30, merged
+   with reciprocal rank fusion (k = 60), the top 10 reranked by a cross-encoder,
+   top k kept. Pages are grouped across releases by `doc_id` (with aliases for moved pages).
+4. **G1, weak retrieval.** If the best rerank score is under the threshold, refuse.
+5. **Context.** The top 3 chunks per release, plus each one's counterpart in the
+   other release: same page and same heading path, or the most similar chunk of
+   that page. Chunks are trimmed to 1,000 characters for the prompt only; quotes
+   are always checked against the full chunk.
+6. **Generation.** The model returns JSON: sentences, each with chunk ids and
+   quotes; optional "gaps" (a release doesn't cover the topic); or "not answerable"
+   with what's missing.
+7. **Validation.** Described below. Sentences that fail are dropped, never repaired.
+8. **G3.** No surviving sentence means a refusal, carrying the model's explanation
+   of what is missing.
+9. **Assembly.** Code writes the answer from the surviving sentences, adds the
+   `[chunk_id]` markers and builds `citations` from the same objects. Gaps are kept
+   only if they are a plain "release X doesn't cover this" statement.
+
+Every path, including exceptions and an unreachable LLM, returns the same
+response schema.
+
+## The validator
+
+For each proposed sentence:
+
+- **Citation check.** The chunk id must be one that was in context, and the quote
+  must occur in that chunk. Matching ignores whitespace, curly quotes and markdown
+  backticks or asterisks, but the quote that's returned is cut from the chunk's own
+  text, so it's always an exact substring.
+- **Numbers and maturity.** Every number and every maturity word (alpha, beta,
+  stable, deprecated, GA) in the sentence must appear in the cited text. NLI models
+  are unreliable on exactly these, and they are exactly what differs between releases.
+- **Support.** An NLI model (`nli-deberta-v3-small`) compares the cited text with
+  the sentence. Contradiction drops it. Entailment keeps it. Neutral keeps it only
+  if at least 60% of its content words come from the quotes or the cited page's
+  title and heading. That last part exists because a line like
+  `FEATURE STATE: Kubernetes v1.30 [beta]` never names its subject; the heading does.
+
+Each decision is recorded in the eval traces with its scores and reason.
 
 ## Ingestion
 
