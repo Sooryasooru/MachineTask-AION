@@ -1,39 +1,38 @@
 # Note on AI-assisted work
 
-I used Claude (Anthropic) throughout this assignment as a pair programmer. This is
-an honest split of what came from where.
+I built this with Claude (Anthropic) as a pair programmer. In short: I owned the
+requirements, the design decisions and the testing; Claude wrote most of the code.
 
-## Mostly AI-generated, reviewed and run by me
+## What I did
 
-- The first drafts of almost all the code: project scaffold, chunker, ingestion,
-  retriever, refusal gates, LLM client, validator, pipeline, API, evaluation scripts
-  and the tests
-- First drafts of the README and the docs, which I then went through and corrected
-  against what actually happened on my machine
-- The script that compared `FEATURE STATE` lines across releases to list candidate
-  version conflicts
-
-## My own work
-
-- Running everything on my own laptop: setting up the environment, benchmarking
-  the models, fetching the corpus, every ingest and eval run, and reading the output
-  of each step before moving on
-- Design corrections I made when reviewing the AI's plan:
-  - retrieve each release independently before combining
-  - pair releases by `doc_id`, not chunk position
-  - check false premises against the whole corpus, not just the retrieved chunks
-  - add a semantic support check next to the exact-quote check, and drop unsupported
-    claims rather than repairing quotes
-  - verify GPU and RAM before committing to a model stack
-  - specify a small local fallback model
+- **Understood the requirements.** I broke the brief down into what is actually
+  scored (refusal, citation integrity, version handling, honest numbers) and planned
+  the work in two parts around that, inside the time box.
+- **Owned the system design.** Claude proposed options; I chose between them and
+  corrected the plan where it was weak. The main calls were mine:
+  - retrieve each release independently, then pair results by `doc_id`
+  - check false premises against the whole corpus, not just what was retrieved
+  - add a semantic (NLI) support check next to exact-quote matching, and drop
+    unsupported claims instead of repairing quotes
   - keep dev and test strictly apart, and report the post-failure slice separately
-- Reviewing the eval questions: reading the release pairs side by side, checking
-  that each conflict is real, and deciding which questions to keep
-- Decisions during the build: going CPU-only after finding there was no NVIDIA
-  GPU, switching models when Groq retired the planned one, stopping tuning after
-  run 2 instead of fitting the test set, and keeping T-36's label unchanged
-- Reading the traces and agreeing the failure analysis
+- **Compared the tools before committing.** Embedding models, vector stores, LLM
+  providers and rerankers. I benchmarked the models on my own laptop first, and that
+  led to going CPU-only (no NVIDIA GPU) and swapping the reranker when the
+  measurements showed it was too slow.
+- **Ran, tested and debugged everything.** Every ingest, eval and Docker run happened
+  on my machine. I read each output before moving on, found the failures, and worked
+  through the fixes: a double sigmoid on reranker scores, Hugo anchors left in
+  headings, a stale `.env`, a model Groq had retired mid-build, and the one-version
+  answers that the first eval run exposed.
+- **Reviewed the eval set.** I read the release pairs side by side, checked that each
+  version conflict is real, and decided which questions to keep.
+- **Decided when to stop.** I stopped tuning after the second run rather than fit my
+  own test set, and left T-36's label unchanged after seeing it fail.
 
-Where the AI drafted something, I ran it, checked the output and asked for changes
-when it was wrong. Several bugs were found that way: a double sigmoid on reranker
-scores, Hugo anchors left in headings, a stale `.env`, and the retired model.
+## What Claude did
+
+- Wrote most of the code from my design: chunker, ingestion, retriever, refusal
+  gates, LLM client, validator, pipeline, API, UI, eval scripts and tests
+- Drafted the README and docs, which I corrected against what actually happened
+- Wrote the script that listed candidate version conflicts, and helped diagnose
+  failures from the eval traces
