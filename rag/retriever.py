@@ -126,6 +126,32 @@ class Retriever:
         self.versions = sorted({c.version for c in self.chunks.values()})
         self.aliases: dict[str, str] = json.loads((index_dir / "doc_aliases.json").read_text())
         self.indexes = {v: _VersionIndex(index_dir, v, self.chunks) for v in self.versions}
+        self.by_doc: dict[tuple[str, str], list[Chunk]] = {}
+        for chunk in self.chunks.values():
+            key = (chunk.version, canonical_doc(chunk.doc_id, self.aliases))
+            self.by_doc.setdefault(key, []).append(chunk)
+
+    def counterpart(self, chunk: Chunk, version: str) -> Chunk | None:
+        """The same page and section in another release, if that release has the page.
+
+        Same heading path wins; otherwise the chunk of that page with the most words
+        in common. Sections get renamed and split between releases, so exact matching
+        alone would miss too often.
+        """
+        candidates = self.by_doc.get((version, canonical_doc(chunk.doc_id, self.aliases)), [])
+        if not candidates:
+            return None
+        for other in candidates:
+            if other.section == chunk.section:
+                return other
+        mine = set(tokenize(chunk.text))
+        return max(
+            candidates,
+            key=lambda c: (
+                len(mine & set(tokenize(c.text))) / (len(mine | set(tokenize(c.text))) or 1),
+                c.chunk_id,
+            ),
+        )
 
     def _search_version(
         self, query: str, vector: np.ndarray | None, version: str, top_k: int, mode: Mode

@@ -41,8 +41,8 @@ MARKER_RE = re.compile(r"\[[^\]]*#c\d+\]")
 
 
 def answer_text(answer: str) -> str:
-    """Answer without the [chunk_id] markers."""
-    return MARKER_RE.sub("", answer)
+    """Answer without [chunk_id] markers, with any Unicode space turned into a plain one."""
+    return " ".join(MARKER_RE.sub("", answer).split())
 
 
 def score(q: dict[str, Any], resp: dict[str, Any]) -> bool:
@@ -52,7 +52,7 @@ def score(q: dict[str, Any], resp: dict[str, Any]) -> bool:
     if resp["refused"]:
         return False
     text = answer_text(resp["answer"]).lower()
-    if not all(m.lower() in text for m in q.get("must_include", [])):
+    if not all(" ".join(m.lower().split()) in text for m in q.get("must_include", [])):
         return False
     if q["type"] == "version_conflict":
         cited = {c["version"] for c in resp["citations"]}
@@ -71,13 +71,16 @@ def citation_checks(resp: dict[str, Any], chunks: dict[str, str]) -> tuple[list[
 
 
 def run_split(
-    pipeline: Pipeline, questions: list[dict[str, Any]], chunks: dict[str, str]
+    pipeline: Pipeline, questions: list[dict[str, Any]], chunks: dict[str, str], name: str = ""
 ) -> dict[str, Any]:
     """Run one question file and compute every metric for it."""
     rows = []
+    traces = []
     for q in questions:
         result = pipeline.retriever.retrieve(q["question"], top_k=5)
-        resp = pipeline.ask(q["question"], top_k=5).model_dump()
+        response, trace = pipeline.ask_traced(q["question"], top_k=5)
+        resp = response.model_dump()
+        traces.append({"qid": q["qid"], **trace})
         valid, integrity = citation_checks(resp, chunks)
         gold = q["gold_docs"]
         retrieved = gold_hit(gold, result, pipeline.retriever.aliases) if gold else None
@@ -105,6 +108,9 @@ def run_split(
         )
         verdict = "ok " if rows[-1]["correct"] else "BAD"
         print(f"  {q['qid']:<6} {q['type']:<17} {verdict} refused={resp['refused']}")
+    if name:
+        with (EVAL_DIR / f"traces_{name}.jsonl").open("w", encoding="utf-8") as fh:
+            fh.writelines(json.dumps(t, ensure_ascii=False) + "\n" for t in traces)
     return summarise(rows)
 
 
@@ -208,7 +214,7 @@ def main() -> None:
         if not questions:
             continue
         print(f"\n== {split} ({len(questions)} questions)")
-        report["splits"][split] = run_split(pipeline, questions, chunks)
+        report["splits"][split] = run_split(pipeline, questions, chunks, split)
     report["runtime_s"] = round(time.time() - started)
 
     out = ROOT / "eval_report.json"

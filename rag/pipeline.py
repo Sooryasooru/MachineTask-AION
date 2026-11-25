@@ -14,6 +14,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from app.config import settings
 from app.schemas import AskResponse, Citation
@@ -26,11 +27,13 @@ from rag.refusal import (
     check_retrieval,
     clean_question,
 )
-from rag.retriever import Retriever, tokenize
-from rag.validator import NliFn, VerifiedSentence, validate
+from rag.retriever import Hit, Retrieval, Retriever, tokenize
+from rag.validator import NliFn, VerifiedSentence, validate_with_report
 
 LlmFn = Callable[[list[dict[str, str]]], str]
+Trace = dict[str, Any]
 MAX_TOP_K = 10
+COUNTERPARTS_PER_VERSION = 2
 _GAP_RE = re.compile(
     r"\b1\.\d+\b.*\b(?:do(?:es)? not|don't|doesn't)\b.*\b(?:cover|mention|document|describe)", re.I
 )
@@ -73,22 +76,58 @@ class Pipeline:
 
     def ask(self, raw_question: object, top_k: object = 5, version: object = None) -> AskResponse:
         """Answer, or refuse with a reason. Never raises."""
+        return self.ask_traced(raw_question, top_k, version)[0]
+
+    def build_context(self, result: Retrieval, pinned: str | None) -> dict[str, list[Hit]]:
+        """Top chunks per release, plus each one's counterpart in the other release.
+
+        Retrieval ranks each release on its own, so the 1.27 and 1.31 versions of the
+        same section often land at different ranks and one gets cut. Pulling in the
+        same page and section from the other release puts both side by side for the
+        model, which is what lets it notice that they disagree.
+        """
+        per = settings.context_per_version
+        context = {v: list(hits[:per]) for v, hits in result.by_version.items()}
+        if pinned:
+            return context
+        for version, hits in list(context.items()):
+            for hit in hits[:per]:
+                for other in self.retriever.versions:
+                    if other == version or other not in context:
+                        continue
+                    have = {h.chunk.chunk_id for h in context[other]}
+                    if len(context[other]) >= per + COUNTERPARTS_PER_VERSION:
+                        continue
+                    twin = self.retriever.counterpart(hit.chunk, other)
+                    if twin and twin.chunk_id not in have:
+                        context[other].append(Hit(twin, hit.score))
+        return context
+
+    def ask_traced(
+        self, raw_question: object, top_k: object = 5, version: object = None
+    ) -> tuple[AskResponse, Trace]:
+        """`ask`, plus a trace of what happened at each step (used by the eval)."""
         start = time.perf_counter()
         question = clean_question(raw_question, settings.max_question_chars)
         k = top_k if isinstance(top_k, int) and not isinstance(top_k, bool) else 5
         k = min(max(k, 1), MAX_TOP_K)
         pinned = version if version in self.retriever.versions else None
+        trace: Trace = {"question": question}
 
-        def done(answer: str, refused: bool, cites: list[Citation], ids: list[str]) -> AskResponse:
-            return AskResponse(
+        def done(
+            answer: str, refused: bool, cites: list[Citation], ids: list[str]
+        ) -> tuple[AskResponse, Trace]:
+            resp = AskResponse(
                 answer=answer,
                 refused=refused,
                 citations=[] if refused else cites,
                 retrieved_chunk_ids=ids,
                 latency_ms=round((time.perf_counter() - start) * 1000),
             )
+            return resp, trace
 
-        def refuse(refusal: Refusal, ids: list[str] | None = None) -> AskResponse:
+        def refuse(refusal: Refusal, ids: list[str] | None = None) -> tuple[AskResponse, Trace]:
+            trace["refusal"] = refusal.reason
             return done(refusal.message, True, [], ids or [])
 
         early = check_input(question, self.vocabulary) or check_false_premise(
@@ -98,17 +137,25 @@ class Pipeline:
             return refuse(early)
 
         result = self.retriever.retrieve(question, top_k=k, version=pinned)
-        ids = result.chunk_ids()
+        trace["top_score"] = round(result.top_score(), 4)
         weak = check_retrieval(result.top_score(), settings.refusal_threshold)
         if weak:
-            return refuse(weak, ids)
+            return refuse(weak, result.chunk_ids())
 
+        context = self.build_context(result, pinned)
+        ids = list(
+            dict.fromkeys(
+                result.chunk_ids() + [h.chunk.chunk_id for hs in context.values() for h in hs]
+            )
+        )
+        trace["context"] = {v: [h.chunk.chunk_id for h in hs] for v, hs in context.items()}
         messages = build_messages(
-            question, result.by_version, settings.context_per_version, settings.context_chars
+            question, context, len(max(context.values(), key=len)), settings.context_chars
         )
         try:
             draft = parse_reply(self.llm(messages))
-        except LLMError:
+        except LLMError as err:
+            trace["llm_error"] = str(err)[:300]
             return refuse(
                 Refusal(
                     "llm_error",
@@ -116,15 +163,28 @@ class Pipeline:
                 ),
                 ids,
             )
+        trace["draft"] = {
+            "answerable": draft.answerable,
+            "sentences": [
+                {"text": d.text, "citations": [(c.chunk_id, c.quote) for c in d.citations]}
+                for d in draft.sentences
+            ],
+            "gaps": draft.gaps,
+            "missing": draft.missing,
+        }
 
-        retrieved = {h.chunk.chunk_id: h.chunk for h in result.all_hits()}
-        kept = (
-            validate(draft.sentences, retrieved, self.nli, settings.nli_entail_threshold)
+        retrieved = {h.chunk.chunk_id: h.chunk for hs in context.values() for h in hs}
+        retrieved.update({h.chunk.chunk_id: h.chunk for h in result.all_hits()})
+        kept, verdicts = (
+            validate_with_report(
+                draft.sentences, retrieved, self.nli, settings.nli_entail_threshold
+            )
             if draft.answerable
-            else []
+            else ([], [])
         )
+        trace["verdicts"] = verdicts
         if not kept:  # G3
-            missing = draft.missing or "the retrieved documentation does not support an answer"
+            missing = draft.missing or "none of the drafted sentences survived citation checking"
             return refuse(
                 Refusal(
                     "unsupported",

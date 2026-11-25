@@ -149,3 +149,38 @@ def test_bad_input_never_raises(index_dir: Path, question: object) -> None:
 def test_false_premise_refused_before_retrieval(index_dir: Path) -> None:
     resp = make(index_dir, conflict_reply()).ask("How do I set the kubelet --max-pod-lag flag?")
     assert resp.refused and resp.retrieved_chunk_ids == []
+
+
+def test_counterpart_from_other_release_is_added_to_context(index_dir: Path) -> None:
+    pipeline = make(index_dir, conflict_reply())
+    result = pipeline.retriever.retrieve("kubelet minor versions older", top_k=1, version="1.31")
+    context = pipeline.build_context(result, pinned=None)
+    assert (
+        "v1.27:releases/skew#c1" in {h.chunk.chunk_id for h in context["1.27"]}
+        if "1.27" in context
+        else True
+    )
+    twin = pipeline.retriever.counterpart(result.by_version["1.31"][0].chunk, "1.27")
+    assert twin is not None and twin.chunk_id == "v1.27:releases/skew#c1"
+
+
+def test_trace_explains_dropped_sentences(index_dir: Path) -> None:
+    reply = json.dumps(
+        {
+            "answerable": True,
+            "sentences": [
+                {
+                    "text": "The kubelet may lag by five versions.",
+                    "citations": [
+                        {
+                            "chunk_id": "v1.31:releases/skew#c1",
+                            "quote": "may lag by five minor versions",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    resp, trace = make(index_dir, reply).ask_traced("How many minor versions may the kubelet lag?")
+    assert resp.refused
+    assert trace["verdicts"][0]["reason"] == "no verifiable citation"

@@ -33,15 +33,18 @@ Rules:
 2. Every sentence needs at least one citation. The quote must be copied character \
 for character from the cited excerpt (5 to 30 words) and must contain the fact.
 3. A sentence is about one release and cites only that release's excerpts.
-4. If the releases differ (a number, a default, or a feature state such as alpha, \
-beta, stable or deprecated), write one sentence per release, starting "On 1.27," or "On 1.31,".
-5. If the releases agree, one sentence is enough.
-6. If only one release's excerpts cover the topic, answer from that release and add \
-a gap such as "The 1.27 documentation excerpts do not cover this."
-7. If the excerpts do not answer the question, or the question assumes a flag, field, \
+4. Both releases are usually shown the same page and section. Compare them. If they \
+differ (a number, a default, or a feature state such as alpha, beta, stable or \
+deprecated), write one sentence per release, starting "On 1.27," or "On 1.31,".
+5. A line like "FEATURE STATE: Kubernetes v1.30 [beta]" states the maturity of the \
+feature its page and section describe. Quote that line when the question is about maturity.
+6. If the releases agree, one sentence is enough.
+7. Only if none of a release's excerpts mention the topic, add a gap such as \
+"The 1.27 documentation excerpts do not cover this."
+8. If the excerpts do not answer the question, or the question assumes a flag, field, \
 feature or behaviour the excerpts do not describe, set "answerable" to false, leave \
 "sentences" empty and explain in "missing".
-8. A value that only appears inside an example command is not a documented default."""
+9. A value that only appears inside an example command is not a documented default."""
 
 
 @dataclass

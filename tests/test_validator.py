@@ -137,3 +137,35 @@ def test_parse_reply_survives_garbage() -> None:
         '{"answerable": true, "sentences": [{"text": "A [v1.31:x#c1].", "citations": []}]}'
     )
     assert draft.sentences[0].text == "A."
+
+
+FS_CHUNK = Chunk(
+    chunk_id="v1.31:concepts/user-namespaces#c1",
+    doc_id="concepts/user-namespaces",
+    version="1.31",
+    title="User Namespaces",
+    section="User Namespaces",
+    text=(
+        "FEATURE STATE: Kubernetes v1.30 [beta] (feature gate `UserNamespacesSupport`)\n\n"
+        "This page explains user namespaces."
+    ),
+)
+
+
+def test_feature_state_line_supports_claim_about_page_subject() -> None:
+    draft = sentence(
+        "On 1.31, user namespaces are beta.",
+        "FEATURE STATE: Kubernetes v1.30 [beta]",
+        FS_CHUNK.chunk_id,
+    )
+    kept = validate([draft], {FS_CHUNK.chunk_id: FS_CHUNK}, neutral_all, 0.5)
+    assert len(kept) == 1
+
+
+def test_wrong_maturity_is_dropped_even_with_page_context() -> None:
+    draft = sentence(
+        "On 1.31, user namespaces are stable.",
+        "FEATURE STATE: Kubernetes v1.30 [beta]",
+        FS_CHUNK.chunk_id,
+    )
+    assert not validate([draft], {FS_CHUNK.chunk_id: FS_CHUNK}, entail_all, 0.5)

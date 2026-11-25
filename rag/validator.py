@@ -7,11 +7,12 @@ A citation survives only if:
      the chunk's own original text, so it is an exact substring by construction.
 
 A sentence survives only if it keeps at least one citation, every number it states
-appears in the cited text, and the cited text supports it. Support is judged by an
-NLI model: a contradiction always drops the sentence; entailment keeps it; "neutral"
-keeps it only when most of the sentence's content words come straight from the
-verified quotes. NLI tends to call faithful
-paraphrases neutral, and this keeps those without letting new claims through.
+and every maturity word (alpha, beta, stable...) appears in the cited text, and the
+cited text supports it. Support is judged by an NLI model: a contradiction always
+drops the sentence; entailment keeps it; "neutral" keeps it only when most of the
+sentence's content words come from the verified quotes or the cited page's title and
+heading. NLI tends to call faithful paraphrases neutral, and this keeps those without
+letting new numbers or maturity claims through.
 """
 
 from __future__ import annotations
@@ -120,6 +121,15 @@ def numbers_in(text: str) -> set[str]:
     return found
 
 
+_STAGE_RE = re.compile(r"\b(alpha|beta|stable|deprecated|ga|generally available)\b", re.I)
+
+
+def stages_in(text: str) -> set[str]:
+    """Maturity words stated in the text; 'GA' and 'generally available' count as stable."""
+    found = {m.lower() for m in _STAGE_RE.findall(text)}
+    return {"stable" if f in ("ga", "generally available") else f for f in found}
+
+
 def strip_version_prefix(sentence: str) -> str:
     """'On 1.31, the kubelet...' -> 'the kubelet...', so NLI judges the claim itself."""
     return _VERSION_PREFIX_RE.sub("", sentence).strip()
@@ -128,7 +138,10 @@ def strip_version_prefix(sentence: str) -> str:
 def _premise(cite: VerifiedCitation) -> str:
     text = cite.chunk.text
     lo, hi = max(0, cite.start - PREMISE_WINDOW), min(len(text), cite.end + PREMISE_WINDOW)
-    return f"Kubernetes {cite.chunk.version} documentation: {text[lo:hi]}"
+    return (
+        f"Kubernetes {cite.chunk.version} documentation, page "
+        f'"{cite.chunk.title} > {cite.chunk.section}": {text[lo:hi]}'
+    )
 
 
 def verify_citations(
@@ -149,17 +162,32 @@ def verify_citations(
     return kept
 
 
-def validate(
+def validate_with_report(
     sentences: Sequence[DraftSentence],
     retrieved: dict[str, Chunk],
     nli: NliFn,
     entail_threshold: float,
-) -> list[VerifiedSentence]:
-    """Return the sentences that keep a verified citation and are supported by it."""
-    candidates = [(s, verify_citations(s, retrieved)) for s in sentences if s.text]
-    candidates = [(s, cites) for s, cites in candidates if cites]
+) -> tuple[list[VerifiedSentence], list[dict[str, object]]]:
+    """Like `validate`, plus one verdict per proposed sentence saying why it stayed or went."""
+    verdicts: list[dict[str, object]] = []
+    candidates = []
+    for s in sentences:
+        if not s.text:
+            continue
+        cites = verify_citations(s, retrieved)
+        if cites:
+            candidates.append((s, cites))
+        else:
+            verdicts.append(
+                {
+                    "text": s.text,
+                    "kept": False,
+                    "reason": "no verifiable citation",
+                    "proposed": [(c.chunk_id, c.quote[:80]) for c in s.citations],
+                }
+            )
     if not candidates:
-        return []
+        return [], verdicts
 
     pairs = [
         (" ".join(_premise(c) for c in cites), strip_version_prefix(s.text))
@@ -171,14 +199,40 @@ def validate(
     for (sentence, cites), (contradiction, entailment, neutral) in zip(
         candidates, scores, strict=True
     ):
+        # The subject of a terse line like "FEATURE STATE: v1.30 [beta]" lives in the
+        # page title and heading, so those words count as cited context too.
         words = _content_words(sentence.text)
-        quoted = set().union(*(_content_words(c.quote) for c in cites))
-        coverage = len(words & quoted) / len(words) if words else 0.0
+        context = set().union(
+            *(_content_words(f"{c.quote} {c.chunk.title} {c.chunk.section}") for c in cites)
+        )
+        coverage = len(words & context) / len(words) if words else 0.0
         cited_text = " ".join(_premise(c) for c in cites)
-        if not numbers_in(strip_version_prefix(sentence.text)) <= numbers_in(cited_text):
-            continue  # a number the cited text never states
-        if contradiction >= max(entailment, neutral):
-            continue
-        if entailment >= entail_threshold or coverage >= NEUTRAL_COVERAGE:
+        verdict: dict[str, object] = {
+            "text": sentence.text,
+            "entailment": round(entailment, 3),
+            "contradiction": round(contradiction, 3),
+            "coverage": round(coverage, 3),
+        }
+        claim = strip_version_prefix(sentence.text)
+        if not numbers_in(claim) <= numbers_in(cited_text):
+            verdicts.append({**verdict, "kept": False, "reason": "number not in cited text"})
+        elif not stages_in(claim) <= stages_in(cited_text):
+            verdicts.append({**verdict, "kept": False, "reason": "maturity not in cited text"})
+        elif contradiction >= max(entailment, neutral):
+            verdicts.append({**verdict, "kept": False, "reason": "contradicted by cited text"})
+        elif entailment >= entail_threshold or coverage >= NEUTRAL_COVERAGE:
+            verdicts.append({**verdict, "kept": True, "reason": "supported"})
             kept.append(VerifiedSentence(sentence.text, tuple(cites), entailment, coverage))
-    return kept
+        else:
+            verdicts.append({**verdict, "kept": False, "reason": "not supported enough"})
+    return kept, verdicts
+
+
+def validate(
+    sentences: Sequence[DraftSentence],
+    retrieved: dict[str, Chunk],
+    nli: NliFn,
+    entail_threshold: float,
+) -> list[VerifiedSentence]:
+    """Return the sentences that keep a verified citation and are supported by it."""
+    return validate_with_report(sentences, retrieved, nli, entail_threshold)[0]
