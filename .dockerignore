@@ -7,3 +7,4 @@ __pycache__
 .ruff_cache
 benchmarks/results
 .env
+eval/.llm_cache
