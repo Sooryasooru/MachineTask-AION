@@ -1,0 +1,36 @@
+{
+  "machine": {
+    "os": "Linux-6.8.0-138-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "torch": "2.15.0+cpu",
+    "ram_total_gb": 7.98,
+    "gpu": null,
+    "vram_total_gb": 0.0
+  },
+  "models": [
+    {
+      "model": "embedder",
+      "id": "BAAI/bge-small-en-v1.5",
+      "load_s": 1.6,
+      "infer_ms": 132.0,
+      "peak_vram_gb": 0.0,
+      "ram_used_gb": 4.82
+    },
+    {
+      "model": "reranker",
+      "id": "BAAI/bge-reranker-base",
+      "load_s": 3.1,
+      "infer_ms": 102.3,
+      "peak_vram_gb": 0.0,
+      "ram_used_gb": 5.17
+    },
+    {
+      "model": "nli",
+      "id": "cross-encoder/nli-deberta-v3-small",
+      "load_s": 2.0,
+      "infer_ms": 86.0,
+      "peak_vram_gb": 0.0,
+      "ram_used_gb": 5.19
+    }
+  ]
+}
