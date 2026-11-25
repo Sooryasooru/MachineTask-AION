@@ -30,7 +30,7 @@ QueryEmbedFn = Callable[[str], np.ndarray]
 RerankFn = Callable[[str, Sequence[str]], Sequence[float]]
 
 CANDIDATES = 30  # per retriever, per version, before fusion
-RERANK_POOL = 15  # fused candidates sent to the cross-encoder, per version
+RERANK_POOL = 10  # fused candidates sent to the cross-encoder, per version
 RRF_K = 60  # standard constant from the RRF paper
 TOKEN_RE = re.compile(r"[a-z0-9]+(?:[-_.][a-z0-9]+)*")
 STOPWORDS = frozenset(

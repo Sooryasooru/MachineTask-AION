@@ -1,5 +1,5 @@
 .RECIPEPREFIX = >
-.PHONY: help setup fetch ingest search recall serve eval bench lint format typecheck test check docker-build docker-run clean
+.PHONY: help setup fetch ingest search ask recall serve eval bench lint format typecheck test check docker-build docker-run clean
 
 PY ?= python
 
@@ -8,9 +8,10 @@ help:
 > @echo "fetch        pull the two doc releases into corpus/"
 > @echo "ingest       rebuild the index from corpus/ (wipes index/ first)"
 > @echo "search       Q=\"question\"  show top retrieved chunks per version"
+> @echo "ask          Q=\"question\"  full answer as JSON, no server needed"
 > @echo "recall       retrieval-only recall@5 for every mode (ablation)"
 > @echo "serve        run the API on PORT (default 8080)"
-> @echo "eval         run the eval and write eval_report.json"
+> @echo "eval         run the eval and write eval_report.json (LLM replies cached in eval/.llm_cache)"
 > @echo "bench        check GPU, VRAM and model load times"
 > @echo "check        format check, lint, typecheck and tests"
 
@@ -26,6 +27,9 @@ ingest:
 search:
 > $(PY) -m rag.retriever $(Q)
 
+ask:
+> $(PY) -m rag.pipeline $(Q)
+
 recall:
 > $(PY) -m eval.retrieval_eval
 
@@ -33,7 +37,7 @@ serve:
 > uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8080}
 
 eval:
-> $(PY) -m eval.run_eval
+> LLM_CACHE_DIR=$${LLM_CACHE_DIR:-eval/.llm_cache} $(PY) -m eval.run_eval
 
 bench:
 > $(PY) benchmarks/bench_gpu.py

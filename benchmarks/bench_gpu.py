@@ -21,7 +21,7 @@ from sentence_transformers import CrossEncoder, SentenceTransformer
 
 MODELS = [
     ("embedder", "BAAI/bge-small-en-v1.5", "bi"),
-    ("reranker", "BAAI/bge-reranker-base", "cross"),
+    ("reranker", "cross-encoder/ms-marco-MiniLM-L-6-v2", "cross"),
     ("nli", "cross-encoder/nli-deberta-v3-small", "cross"),
 ]
 SAMPLE_Q = "How many minor versions may the kubelet lag behind kube-apiserver?"

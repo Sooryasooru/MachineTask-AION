@@ -17,16 +17,22 @@ from typing import Any
 
 from app.config import settings
 from eval.metrics import gold_hit, gold_hit_every_version, load_questions, percentile, rate
-from rag.retriever import Mode, load_default_retriever
+from rag.retriever import Mode, Retrieval, load_default_retriever
 
 MODES: tuple[Mode, ...] = ("bm25", "dense", "hybrid", "hybrid_rerank")
 EVAL_DIR = Path(__file__).parent
 TOP_K = 5
+CONTEXT_K = 3  # chunks per version the LLM actually sees
+
+
+def first_k(result: Retrieval, k: int) -> Retrieval:
+    """Same result, cut to the top k per version."""
+    return Retrieval(by_version={v: hits[:k] for v, hits in result.by_version.items()})
 
 
 def run_split(retriever: Any, questions: list[dict[str, Any]], mode: Mode) -> dict[str, Any]:
     """recall@5, both-version recall on conflicts, misses and latency for one split."""
-    hits, both, latencies, misses = [], [], [], []
+    hits, hits3, both, latencies, misses = [], [], [], [], []
     for q in questions:
         if not q["gold_docs"]:
             continue
@@ -35,12 +41,14 @@ def run_split(retriever: Any, questions: list[dict[str, Any]], mode: Mode) -> di
         latencies.append((time.perf_counter() - start) * 1000)
         hit = gold_hit(q["gold_docs"], result, retriever.aliases)
         hits.append(hit)
+        hits3.append(gold_hit(q["gold_docs"], first_k(result, CONTEXT_K), retriever.aliases))
         if not hit:
             misses.append(q["qid"])
         if q["type"] == "version_conflict":
             both.append(gold_hit_every_version(q["gold_docs"], result, retriever.aliases))
     return {
         "recall_at_5": rate(hits),
+        "recall_at_3": rate(hits3),
         "conflict_both_versions_at_5": rate(both),
         "answerable_questions": len(hits),
         "misses": misses,

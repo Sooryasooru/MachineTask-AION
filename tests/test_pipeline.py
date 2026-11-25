@@ -1,0 +1,151 @@
+"""End-to-end pipeline with a fake LLM and fake NLI: every path returns the schema."""
+
+import json
+from collections.abc import Sequence
+from pathlib import Path
+
+import pytest
+
+from app.schemas import AskResponse
+from rag.ingest import build_index
+from rag.llm import LLMError
+from rag.pipeline import Pipeline, load_known_terms
+from rag.retriever import Retriever, tokenize
+from tests.test_ingest import fake_embed
+
+SKEW = {
+    "1.27": "The kubelet may be up to two minor versions older than kube-apiserver.",
+    "1.31": "The kubelet may be up to three minor versions older than kube-apiserver.",
+}
+
+
+def entail(pairs: Sequence[tuple[str, str]]) -> list[tuple[float, float, float]]:
+    return [(0.01, 0.98, 0.01) for _ in pairs]
+
+
+def rerank(query: str, texts: Sequence[str]) -> list[float]:
+    words = set(tokenize(query))
+    return [min(1.0, len(words & set(tokenize(t))) / 4) for t in texts]
+
+
+@pytest.fixture(name="index_dir")
+def index_fixture(tmp_path: Path) -> Path:
+    corpus = tmp_path / "corpus"
+    for version, text in SKEW.items():
+        root = corpus / version / "releases"
+        root.mkdir(parents=True)
+        (root / "skew.md").write_text(f"---\ntitle: Skew\n---\n## kubelet\n{text}\n")
+        for i in range(4):
+            (root / f"f{i}.md").write_text(
+                f"---\ntitle: F{i}\n---\n## Other\nUnrelated page {i} about storage classes here.\n"
+            )
+    build_index(corpus, tmp_path / "index", fake_embed)
+    return tmp_path / "index"
+
+
+def make(index_dir: Path, reply: str | Exception) -> Pipeline:
+    retriever = Retriever(index_dir, lambda q: fake_embed([q])[0], rerank)
+
+    def llm(_: list[dict[str, str]]) -> str:
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+    return Pipeline(retriever, llm, entail, load_known_terms(index_dir))
+
+
+def conflict_reply() -> str:
+    return json.dumps(
+        {
+            "answerable": True,
+            "sentences": [
+                {
+                    "text": "On 1.27, the kubelet may be up to two minor versions older.",
+                    "citations": [
+                        {
+                            "chunk_id": "v1.27:releases/skew#c1",
+                            "quote": "kubelet may be up to two minor versions older",
+                        }
+                    ],
+                },
+                {
+                    "text": "On 1.31, the kubelet may be up to three minor versions older.",
+                    "citations": [
+                        {
+                            "chunk_id": "v1.31:releases/skew#c1",
+                            "quote": "kubelet may be up to three minor versions older",
+                        }
+                    ],
+                },
+            ],
+            "gaps": [],
+            "missing": "",
+        }
+    )
+
+
+def test_version_conflict_answer_cites_both(index_dir: Path) -> None:
+    resp = make(index_dir, conflict_reply()).ask("How many minor versions may the kubelet lag?")
+    assert not resp.refused
+    assert {c.version for c in resp.citations} == {"1.27", "1.31"}
+    for cite in resp.citations:
+        assert f"[{cite.chunk_id}]" in resp.answer
+    assert "1.27" in resp.answer and "1.31" in resp.answer
+
+
+def test_every_marker_has_a_citation(index_dir: Path) -> None:
+    resp = make(index_dir, conflict_reply()).ask("How many minor versions may the kubelet lag?")
+    markers = set(__import__("re").findall(r"\[([^\]]+)\]", resp.answer))
+    assert markers == {c.chunk_id for c in resp.citations}
+
+
+def test_unanswerable_reply_becomes_refusal(index_dir: Path) -> None:
+    reply = json.dumps(
+        {
+            "answerable": False,
+            "sentences": [],
+            "gaps": [],
+            "missing": "the excerpts give no node limit",
+        }
+    )
+    resp = make(index_dir, reply).ask("What is the maximum number of kubelet nodes?")
+    assert resp.refused and resp.citations == [] and resp.retrieved_chunk_ids
+
+
+def test_fabricated_quote_becomes_refusal(index_dir: Path) -> None:
+    reply = json.dumps(
+        {
+            "answerable": True,
+            "sentences": [
+                {
+                    "text": "The kubelet may lag by five versions.",
+                    "citations": [
+                        {
+                            "chunk_id": "v1.31:releases/skew#c1",
+                            "quote": "may lag by five minor versions",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    resp = make(index_dir, reply).ask("How many minor versions may the kubelet lag?")
+    assert resp.refused and resp.citations == []
+
+
+def test_llm_failure_is_a_refusal_not_an_error(index_dir: Path) -> None:
+    resp = make(index_dir, LLMError("down")).ask("How many minor versions may the kubelet lag?")
+    assert isinstance(resp, AskResponse) and resp.refused
+
+
+@pytest.mark.parametrize(
+    "question", ["", "x" * 4000, "¿Cuántas versiones puede retrasarse?", None, 42]
+)
+def test_bad_input_never_raises(index_dir: Path, question: object) -> None:
+    resp = make(index_dir, conflict_reply()).ask(question)
+    assert isinstance(resp, AskResponse)
+
+
+def test_false_premise_refused_before_retrieval(index_dir: Path) -> None:
+    resp = make(index_dir, conflict_reply()).ask("How do I set the kubelet --max-pod-lag flag?")
+    assert resp.refused and resp.retrieved_chunk_ids == []

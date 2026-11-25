@@ -24,10 +24,11 @@ py-version = "3.10"
 [tool.pylint.format]
 max-line-length = 100
 
-# Settings dataclass holds every env var in one place, so allow more fields.
+# Settings holds every env var in one place, and the pipeline's ask() reads top to
+# bottom on purpose, so both limits are a little looser than the defaults.
 [tool.pylint.design]
-max-attributes = 15
-max-locals = 20
+max-attributes = 20
+max-locals = 25
 
 [tool.pylint."messages control"]
 disable = ["too-few-public-methods", "fixme"]
