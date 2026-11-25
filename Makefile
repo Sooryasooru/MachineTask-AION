@@ -1,5 +1,5 @@
 .RECIPEPREFIX = >
-.PHONY: help setup fetch ingest search ask recall serve eval bench lint format typecheck test check docker-build docker-run clean
+.PHONY: help setup fetch ingest search ask recall smoke serve eval bench lint format typecheck test check docker-build docker-run clean
 
 PY ?= python
 
@@ -10,6 +10,7 @@ help:
 > @echo "search       Q=\"question\"  show top retrieved chunks per version"
 > @echo "ask          Q=\"question\"  full answer as JSON, no server needed"
 > @echo "recall       retrieval-only recall@5 for every mode (ablation)"
+> @echo "smoke        run the brief's validation scenarios against a running server"
 > @echo "serve        run the API on PORT (default 8080)"
 > @echo "eval         run the eval and write eval_report.json (LLM replies cached in eval/.llm_cache)"
 > @echo "bench        check GPU, VRAM and model load times"
@@ -32,6 +33,9 @@ ask:
 
 recall:
 > $(PY) -m eval.retrieval_eval
+
+smoke:
+> $(PY) scripts/smoke_test.py
 
 serve:
 > uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8080}

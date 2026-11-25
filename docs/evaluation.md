@@ -62,9 +62,10 @@ Deterministic, no LLM judge:
 
 ## Refusal threshold
 
-G1 compares the best rerank score with `REFUSAL_THRESHOLD`. On the dev set,
-answerable questions scored 0.977 and above, two near-topic unanswerable questions
-scored 0.877 and 0.893, and an off-topic one scored 0.001. A threshold cannot
+G1 compares the best rerank score with `REFUSAL_THRESHOLD`. On the dev set, with
+the MiniLM reranker, answerable questions scored 0.996 and above, two near-topic
+unanswerable questions scored 0.922 and 0.937, and an off-topic one scored 0.006.
+The earlier bge reranker showed the same pattern (0.977+, 0.877/0.893, 0.001). A threshold cannot
 separate the near-topic cases without refusing real questions, so G1 is set low
 (0.05) and only stops clearly unrelated questions. Near-topic unanswerables are
 handled by the model's own judgement and the validator, which is where they were

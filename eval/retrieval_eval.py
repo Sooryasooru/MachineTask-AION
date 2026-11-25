@@ -90,13 +90,13 @@ def main() -> None:
     out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     print(
-        f"{'mode':<15}{'test recall@5':>15}{'test both-ver':>15}{'dev recall@5':>14}{'p95 ms':>9}"
+        f"{'mode':<15}{'test r@5':>10}{'test r@3':>10}{'both-ver':>10}{'dev r@5':>9}{'p95 ms':>8}"
     )
     for mode, res in report["modes"].items():
         t, d = res["test"], res["dev"]
         print(
-            f"{mode:<15}{t['recall_at_5']:>15}{t['conflict_both_versions_at_5']:>15}"
-            f"{d['recall_at_5']:>14}{t['p95_retrieval_ms']:>9}"
+            f"{mode:<15}{t['recall_at_5']:>10}{t['recall_at_3']:>10}"
+            f"{t['conflict_both_versions_at_5']:>10}{d['recall_at_5']:>9}{t['p95_retrieval_ms']:>8}"
         )
     print("\ntest misses (hybrid_rerank):", report["modes"]["hybrid_rerank"]["test"]["misses"])
     print("\ndev top reranker scores (for the refusal threshold):")

@@ -48,7 +48,8 @@ one release.
 
 Other commands: `make search Q="..."` shows raw retrieval per release, `make ask
 Q="..."` prints one full answer without starting the server, `make recall` runs
-the retrieval-only ablation, and `make check` runs ruff, pylint, mypy and pytest.
+the retrieval-only ablation, `make smoke` runs the brief's validation scenarios
+against a running server, and `make check` runs ruff, pylint, mypy and pytest.
 
 Every setting is an environment variable (see `.env.example`). There are no keys
 or absolute paths in the source.
@@ -140,8 +141,8 @@ the other release. That one change took version conflicts from 3/9 to 7/9.
   are different things.
 - **G1, weak retrieval.** The best rerank score is below `REFUSAL_THRESHOLD=0.05`.
   This only catches clearly off-topic questions, and on purpose. On the dev set,
-  near-topic unanswerable questions ("default --max-pods?") scored 0.88–0.89, close
-  to answerable ones (0.98+). An off-topic question scored 0.001. A higher threshold
+  near-topic unanswerable questions ("default --max-pods?") scored 0.92–0.94, close
+  to answerable ones (0.996 and up). An off-topic question scored 0.006. A higher threshold
   would start refusing real questions, and no threshold separates the near-topic
   cases, so they're left to the next gate. The threshold came from the dev split
   only.
@@ -181,16 +182,18 @@ retrieval plus reranking is about 1 s of that.
 
 **Retrieval ablation** (`make recall`, test set, recall@5):
 
-| Mode | recall@5 | both releases found (conflicts) |
-|---|---|---|
-| BM25 only | 0.96 | 1.0 |
-| Dense only | 0.96 | 1.0 |
-| Hybrid (RRF) | **1.00** | 1.0 |
-| Hybrid + rerank | 1.00 | 1.0 |
+| Mode | recall@5 | both releases found (conflicts) | p95 retrieval |
+|---|---|---|---|
+| BM25 only | 0.96 | 1.0 | 8 ms |
+| Dense only | 0.96 | 1.0 | 17 ms |
+| Hybrid (RRF) | **1.00** | 1.0 | 27 ms |
+| Hybrid + rerank (MiniLM-L6) | 1.00 | 1.0 | 1.2 s |
+| Hybrid + rerank (bge-reranker-base, first try) | 1.00 | 1.0 | 18.8 s |
 
 Hybrid bought four points over either retriever alone. The reranker bought no
-recall on top of that. With `bge-reranker-base` it also pushed p95 retrieval to
-18.8 s on this CPU, so I swapped it for MiniLM-L6. The reranker stays for two
+recall on top of that. The first reranker I tried, `bge-reranker-base`, pushed p95
+retrieval to 18.8 s on this CPU, so I swapped it for MiniLM-L6 at 1.2 s.
+`eval/retrieval_ablation.json` also has recall@3, which is what the model actually sees. The reranker stays for two
 reasons: it orders the top 3 that the model actually sees, and its score is the
 signal behind G1. It doesn't earn its place on recall, and I'd rather say so.
 
