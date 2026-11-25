@@ -1,0 +1,9 @@
+{
+  "source": "https://github.com/kubernetes/website.git",
+  "fetched_on_utc": "2026-11-25",
+  "paths": ["content/en/docs/concepts", "content/en/docs/tasks", "content/en/releases/version-skew-policy.md"],
+  "versions": [
+    {"version": "1.27", "branch": "release-1.27", "commit": "f173f35615f0e87a49d963f28908cf25ebc538af", "pages": 335},
+    {"version": "1.31", "branch": "release-1.31", "commit": "11f92a075a2a6b97448d8bb586ad7eac14871e04", "pages": 357}
+  ]
+}
