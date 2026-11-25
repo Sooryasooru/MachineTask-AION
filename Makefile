@@ -1,5 +1,5 @@
 .RECIPEPREFIX = >
-.PHONY: help setup fetch ingest search serve eval bench lint format typecheck test check docker-build docker-run clean
+.PHONY: help setup fetch ingest search recall serve eval bench lint format typecheck test check docker-build docker-run clean
 
 PY ?= python
 
@@ -8,6 +8,7 @@ help:
 > @echo "fetch        pull the two doc releases into corpus/"
 > @echo "ingest       rebuild the index from corpus/ (wipes index/ first)"
 > @echo "search       Q=\"question\"  show top retrieved chunks per version"
+> @echo "recall       retrieval-only recall@5 for every mode (ablation)"
 > @echo "serve        run the API on PORT (default 8080)"
 > @echo "eval         run the eval and write eval_report.json"
 > @echo "bench        check GPU, VRAM and model load times"
@@ -24,6 +25,9 @@ ingest:
 
 search:
 > $(PY) -m rag.retriever $(Q)
+
+recall:
+> $(PY) -m eval.retrieval_eval
 
 serve:
 > uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8080}

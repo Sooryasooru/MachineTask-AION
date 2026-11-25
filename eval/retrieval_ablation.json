@@ -1,0 +1,135 @@
+{
+  "top_k": 5,
+  "modes": {
+    "bm25": {
+      "test": {
+        "recall_at_5": 0.96,
+        "conflict_both_versions_at_5": 1.0,
+        "answerable_questions": 25,
+        "misses": [
+          "T-29"
+        ],
+        "p95_retrieval_ms": 8
+      },
+      "dev": {
+        "recall_at_5": 1.0,
+        "conflict_both_versions_at_5": 1.0,
+        "answerable_questions": 7,
+        "misses": [],
+        "p95_retrieval_ms": 6
+      }
+    },
+    "dense": {
+      "test": {
+        "recall_at_5": 0.96,
+        "conflict_both_versions_at_5": 1.0,
+        "answerable_questions": 25,
+        "misses": [
+          "T-24"
+        ],
+        "p95_retrieval_ms": 17
+      },
+      "dev": {
+        "recall_at_5": 1.0,
+        "conflict_both_versions_at_5": 1.0,
+        "answerable_questions": 7,
+        "misses": [],
+        "p95_retrieval_ms": 19
+      }
+    },
+    "hybrid": {
+      "test": {
+        "recall_at_5": 1.0,
+        "conflict_both_versions_at_5": 1.0,
+        "answerable_questions": 25,
+        "misses": [],
+        "p95_retrieval_ms": 27
+      },
+      "dev": {
+        "recall_at_5": 1.0,
+        "conflict_both_versions_at_5": 1.0,
+        "answerable_questions": 7,
+        "misses": [],
+        "p95_retrieval_ms": 27
+      }
+    },
+    "hybrid_rerank": {
+      "test": {
+        "recall_at_5": 1.0,
+        "conflict_both_versions_at_5": 1.0,
+        "answerable_questions": 25,
+        "misses": [],
+        "p95_retrieval_ms": 18811
+      },
+      "dev": {
+        "recall_at_5": 1.0,
+        "conflict_both_versions_at_5": 1.0,
+        "answerable_questions": 7,
+        "misses": [],
+        "p95_retrieval_ms": 16374
+      }
+    }
+  },
+  "dev_top_scores": [
+    {
+      "qid": "D-01",
+      "type": "version_conflict",
+      "answerable": true,
+      "top_score": 0.9842
+    },
+    {
+      "qid": "D-02",
+      "type": "version_conflict",
+      "answerable": true,
+      "top_score": 0.9933
+    },
+    {
+      "qid": "D-03",
+      "type": "unanswerable",
+      "answerable": false,
+      "top_score": 0.8772
+    },
+    {
+      "qid": "D-04",
+      "type": "unanswerable",
+      "answerable": false,
+      "top_score": 0.0008
+    },
+    {
+      "qid": "D-05",
+      "type": "false_premise",
+      "answerable": false,
+      "top_score": 0.8927
+    },
+    {
+      "qid": "D-06",
+      "type": "version_gap",
+      "answerable": true,
+      "top_score": 0.9773
+    },
+    {
+      "qid": "D-07",
+      "type": "factual",
+      "answerable": true,
+      "top_score": 0.9989
+    },
+    {
+      "qid": "D-08",
+      "type": "factual",
+      "answerable": true,
+      "top_score": 0.9923
+    },
+    {
+      "qid": "D-09",
+      "type": "factual",
+      "answerable": true,
+      "top_score": 0.9864
+    },
+    {
+      "qid": "D-10",
+      "type": "procedural",
+      "answerable": true,
+      "top_score": 0.9996
+    }
+  ]
+}

@@ -182,8 +182,12 @@ def load_default_retriever(index_dir: Path) -> Retriever:
         return np.asarray(embedder.encode(BGE_QUERY_PREFIX + text, normalize_embeddings=True))
 
     def rerank(query: str, texts: Sequence[str]) -> list[float]:
-        logits = reranker.predict([(query, t) for t in texts])
-        return [1.0 / (1.0 + math.exp(-float(x))) for x in logits]  # 0..1, easier to threshold
+        raw = [float(x) for x in reranker.predict([(query, t) for t in texts])]
+        # Recent sentence-transformers already apply a sigmoid to single-label
+        # cross-encoders. Only squash if we were handed raw logits.
+        if all(0.0 <= x <= 1.0 for x in raw):
+            return raw
+        return [1.0 / (1.0 + math.exp(-x)) for x in raw]
 
     return Retriever(index_dir, embed_query, rerank)
 

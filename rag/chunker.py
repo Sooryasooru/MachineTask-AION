@@ -190,6 +190,7 @@ def clean_markdown(body: str) -> str:
     body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
     body = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", body)
     body = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", body)
+    body = re.sub(r"[ \t]*\{#[\w-]+\}", "", body)  # heading anchors like {#swap-memory}
     body = re.sub(r"[ \t]+\n", "\n", body)
     return re.sub(r"\n{3,}", "\n\n", body).strip()
 
