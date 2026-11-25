@@ -1,0 +1,6 @@
+{
+  "answerable": false,
+  "sentences": [],
+  "gaps": [],
+  "missing": "The provided excerpts for releases 1.27 and 1.31 do not mention the kubelet --max-pods flag or its default value."
+}

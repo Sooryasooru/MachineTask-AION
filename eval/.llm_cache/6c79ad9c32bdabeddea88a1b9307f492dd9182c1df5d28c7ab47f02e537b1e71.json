@@ -1,0 +1,1 @@
+{"answerable":true,"sentences":[{"text":"Node heartbeat Lease objects are stored in the \"kube-node-lease\" namespace.","citations":[{"chunk_id":"v1.27:concepts/architecture/leases#c2","quote":"there is a `Lease` object with a matching name in the `kube-node-lease` namespace"}]}],"gaps":[],"missing":""}

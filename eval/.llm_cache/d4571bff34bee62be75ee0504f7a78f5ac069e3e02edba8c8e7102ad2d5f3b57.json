@@ -1,0 +1,1 @@
+{"answerable":true,"sentences":[{"text":"On 1.31, the PodReadyToStartContainers condition is in beta, as indicated by the feature state line.","citations":[{"chunk_id":"v1.31:concepts/workloads/pods/pod-lifecycle#c17","quote":"FEATURE STATE: Kubernetes v1.29 [beta]"}]}],"gaps":["The 1.27 documentation excerpts do not cover the PodReadyToStartContainers condition."],"missing":""}

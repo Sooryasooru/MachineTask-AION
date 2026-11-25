@@ -1,0 +1,9 @@
+{
+  "answerable": false,
+  "sentences": [],
+  "gaps": [
+    "The 1.27 documentation excerpts do not cover this.",
+    "The 1.31 documentation excerpts do not cover this."
+  ],
+  "missing": "The excerpts do not mention any limit on the number of Pods per namespace."
+}

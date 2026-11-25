@@ -130,6 +130,8 @@ My own laptop: HP Pavilion 14, 12th-gen Intel, 8 GB RAM, no GPU. The model was
 Answers usually take 2–5 seconds. The 17 s figure includes waiting on the free
 tier's rate limit.
 
+**Getting my exact numbers.** The model's replies from my run are saved in `eval/.llm_cache/`, so `make eval` replays them and reproduces every accuracy and refusal number above exactly, with no API key needed. Search, checking and scoring still run live on your machine; only latency differs, because no model calls are made. Delete that folder to run fresh with your own key, and expect small differences, because the model isn't perfectly deterministic.
+
 **Being upfront:** I improved the system after seeing the first test run (63.9%
 then). The changes were to the design, not thresholds tuned to my answers. To check
 they hold up, I wrote 10 new questions before the second run, and those scored 80%.
@@ -181,8 +183,8 @@ return the normal format. Rebuilding the index gives identical files every time.
   check, the answer covers only the other release (T-06, T-07).
 - **Example files aren't included.** Some task pages point to YAML files I didn't
   ingest.
-- **Free-tier limits.** Groq allows about one full eval run per day, so `make eval`
-  caches the model's replies in `eval/.llm_cache/`.
+- **Free-tier limits.** Groq allows about one full eval run per day, which is one
+  reason the recorded replies are included.
 
 ## What I left out
 

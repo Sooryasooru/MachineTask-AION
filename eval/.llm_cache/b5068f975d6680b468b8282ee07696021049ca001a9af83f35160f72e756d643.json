@@ -1,0 +1,1 @@
+{"answerable":true,"sentences":[{"text":"The default terminationGracePeriodSeconds for a Pod is 30 seconds.","citations":[{"chunk_id":"v1.27:concepts/workloads/pods/pod-lifecycle#c22","quote":"The default `terminationGracePeriodSeconds` setting is 30 seconds."}]}],"gaps":[],"missing":null}

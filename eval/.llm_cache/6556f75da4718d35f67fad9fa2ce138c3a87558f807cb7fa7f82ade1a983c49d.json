@@ -1,0 +1,3 @@
+[
+{"answerable":true,"sentences":[{"text":"On 1.27, you can enable at‑rest encryption for Secrets because all APIs that write persistent data support at‑rest encryption, for example you can enable at‑rest encryption for Secrets.","citations":[{"chunk_id":"v1.27:tasks/administer-cluster/encrypt-data#c1","quote":"All of the APIs in Kubernetes that let you write persistent API resource data support at‑rest encryption. For example, you can enable at‑rest encryption for Secrets."}]}]},"gaps",":",[],"missing",":",""
+]
