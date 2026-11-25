@@ -4,6 +4,8 @@
 #   corpus/<version>/concepts/...        from content/en/docs/concepts
 #   corpus/<version>/tasks/...           from content/en/docs/tasks
 #   corpus/<version>/releases/version-skew-policy.md
+#   corpus/_feature_gates/<version>/*.md  (metadata only, not counted as pages;
+#                                          1.31 pages read gate maturity from here)
 #
 # The commit SHA of each branch is written to corpus/MANIFEST.json, so the exact
 # snapshot can be fetched again later. Re-running replaces corpus/<version>/.
@@ -23,7 +25,8 @@ for v in "${VERSIONS[@]}"; do
   git -C "$WORK/$v" sparse-checkout set \
     content/en/docs/concepts \
     content/en/docs/tasks \
-    content/en/releases
+    content/en/releases \
+    content/en/docs/reference/command-line-tools-reference/feature-gates
 
   sha="$(git -C "$WORK/$v" rev-parse HEAD)"
   dest="$CORPUS/$v"
@@ -32,6 +35,13 @@ for v in "${VERSIONS[@]}"; do
   cp -r "$WORK/$v/content/en/docs/concepts" "$dest/"
   cp -r "$WORK/$v/content/en/docs/tasks" "$dest/"
   cp "$WORK/$v/content/en/releases/version-skew-policy.md" "$dest/releases/"
+
+  gates_src="$WORK/$v/content/en/docs/reference/command-line-tools-reference/feature-gates"
+  rm -rf "$CORPUS/_feature_gates/$v"
+  if [ -d "$gates_src" ]; then
+    mkdir -p "$CORPUS/_feature_gates/$v"
+    cp "$gates_src"/*.md "$CORPUS/_feature_gates/$v/"
+  fi
 
   # Keep markdown only. Images and example YAML aren't part of the text corpus.
   find "$dest" -type f ! -name '*.md' -delete

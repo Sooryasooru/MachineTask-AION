@@ -5,3 +5,4 @@ ruff>=0.5
 pylint>=3.2
 mypy>=1.10
 psutil>=5.9
+types-PyYAML>=6.0

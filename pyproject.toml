@@ -27,12 +27,13 @@ max-line-length = 100
 # Settings dataclass holds every env var in one place, so allow more fields.
 [tool.pylint.design]
 max-attributes = 15
+max-locals = 20
 
 [tool.pylint."messages control"]
 disable = ["too-few-public-methods", "fixme"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 ignore_missing_imports = true
 disallow_untyped_defs = true
 exclude = ["corpus/", "index/", "benchmarks/"]
