@@ -22,7 +22,7 @@ Written as I went, not tidied up afterwards.
 
 ## Left out on purpose
 
-- Citation UI: time went into the second eval round instead
+- A UI framework: the page is one static HTML file, served by the API
 - LLM-as-judge: keyword scoring is reproducible
 - Tuning after run 2: would have been fitting my own test labels
 - Example YAML files and the rest of the docs site: bounded corpus by design

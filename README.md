@@ -35,7 +35,11 @@ make docker-build
 make docker-run            # reads .env for LLM_API_KEY
 ```
 
-Try it:
+Open **http://localhost:8080** for a small page: ask a question, and every claim in
+the answer carries a 1.27 or 1.31 marker. Select a marker to read the cited passage,
+with the quoted words highlighted.
+
+Or from the command line:
 
 ```bash
 curl -s localhost:8080/healthz
@@ -259,11 +263,12 @@ Bonus, implemented:
 - A reranker with before/after numbers, including the honest result that it added no recall
 - A `version` filter on `/ask`
 - A second eval slice written after seeing failures, reported separately
+- A small UI at `/` that renders citations as clickable markers, coloured by
+  release, each opening the source chunk with the quote highlighted (`GET /chunk?id=`
+  serves the chunk text)
 - Confidence buckets in `eval_report.json` (accuracy of answered questions grouped
   by retrieval score). With this few answered questions per bucket, it's an
   observation, not a calibration claim.
-
-Not implemented: the citation UI. See below.
 
 ## Known issues
 
@@ -288,8 +293,9 @@ Not implemented: the citation UI. See below.
 
 ## What I left out, and why
 
-- **The citation UI.** The time went into the second eval round instead, which moved
-  version conflicts from 3/9 to 7/9. That seemed a better use of the hours.
+- **A polished UI.** The page at `/` is deliberately one static HTML file with no
+  build step. The time went into the second eval round, which moved version
+  conflicts from 3/9 to 7/9.
 - **An LLM judge for answer quality.** Keyword scoring is reproducible to the digit,
   and the brief checks reproducibility.
 - **A bigger reranker or GPU path.** No GPU on this machine, and the ablation showed
@@ -302,11 +308,11 @@ Not implemented: the citation UI. See below.
 ## Repository map
 
 ```
-app/         FastAPI app, settings, response schema
+app/         FastAPI app, settings, response schema, the one-page UI
 rag/         chunker, ingest, retriever, refusal gates, LLM client,
              prompt/generator, validator, pipeline
 eval/        question sets, eval and ablation scripts, traces, run-1 report
-tests/       63 tests: chunking, determinism, retrieval, validator, gates,
+tests/       65 tests: chunking, determinism, retrieval, validator, gates,
              pipeline, API contract, scoring
 docs/        architecture, evaluation method, decisions log
 corpus/      the two releases as fetched, plus MANIFEST.json

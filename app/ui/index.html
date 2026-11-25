@@ -1,1 +1,233 @@
-<!-- Small page that renders answers with clickable citations. Built in Part 2. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kubernetes docs, 1.27 and 1.31</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f6f7f5;
+    --ink: #1c2226;
+    --muted: #5e6a70;
+    --rule: #d8ddda;
+    --r127: #1f6f78;
+    --r131: #6a4fa6;
+    --r127-soft: #e3eff0;
+    --r131-soft: #ece8f5;
+    --refused: #eceeec;
+    --serif: "Source Serif 4", Georgia, serif;
+    --sans: "Public Sans", system-ui, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--sans); }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 32px 24px 64px; }
+  header h1 { font: 600 1.75rem/1.2 var(--serif); margin: 0 0 6px; }
+  header p { margin: 0; color: var(--muted); max-width: 68ch; }
+  .legend { display: inline-flex; gap: 14px; margin-left: 4px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+  .legend .l127::before { background: var(--r127); }
+  .legend .l131::before { background: var(--r131); }
+
+  form { margin: 28px 0 10px; display: flex; flex-wrap: wrap; gap: 10px; }
+  textarea { flex: 1 1 100%; width: 100%; min-height: 64px; resize: vertical; padding: 12px 14px;
+    font: 1.05rem/1.45 var(--sans); color: var(--ink); background: #fff; border: 1px solid var(--rule); border-radius: 6px; }
+  select, button { font: 500 0.95rem var(--sans); border-radius: 6px; padding: 9px 14px; border: 1px solid var(--rule); background: #fff; color: var(--ink); }
+  button[type=submit] { margin-left: auto; padding: 9px 22px; background: var(--ink); color: var(--paper); border-color: var(--ink); cursor: pointer; }
+  button[type=submit]:disabled { opacity: 0.55; cursor: progress; }
+  .examples { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 0.92rem; }
+  .examples button { text-align: left; border: none; background: none; padding: 2px 0; color: var(--ink); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; cursor: pointer; font-weight: 400; }
+  .examples button:hover { text-decoration-color: var(--ink); }
+
+  main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 40px; margin-top: 32px; }
+  .answer h2, .evidence h2 { font: 600 1rem var(--sans); margin: 0 0 12px; }
+  .status { color: var(--muted); font-size: 0.9rem; margin-bottom: 12px; }
+  .prose { font: 1.15rem/1.65 var(--serif); max-width: 66ch; }
+  .prose p { margin: 0 0 0.9em; }
+  .refused { background: var(--refused); border-left: 3px solid var(--muted); padding: 14px 18px; border-radius: 0 6px 6px 0; }
+  .empty { color: var(--muted); }
+
+  .cite { font: 600 0.72rem/1 var(--sans); padding: 3px 6px 2px; margin: 0 2px; border-radius: 4px; border: 1px solid; cursor: pointer; vertical-align: 2px; background: #fff; }
+  .cite.v127 { color: var(--r127); border-color: var(--r127); }
+  .cite.v131 { color: var(--r131); border-color: var(--r131); }
+  .cite[aria-pressed=true].v127 { background: var(--r127); color: #fff; }
+  .cite[aria-pressed=true].v131 { background: var(--r131); color: #fff; }
+
+  .evidence { position: sticky; top: 20px; align-self: start; }
+  .chunk { border-top: 3px solid var(--rule); padding-top: 12px; }
+  .chunk.v127 { border-color: var(--r127); }
+  .chunk.v131 { border-color: var(--r131); }
+  .chunk .where { font-size: 0.92rem; margin: 0 0 4px; }
+  .chunk .id { font: 0.78rem var(--mono); color: var(--muted); word-break: break-all; margin: 0 0 12px; }
+  .chunk pre { white-space: pre-wrap; font: 0.9rem/1.55 var(--sans); margin: 0; max-height: 60vh; overflow: auto; }
+  .chunk mark { padding: 1px 0; color: inherit; }
+  .chunk.v127 mark { background: var(--r127-soft); box-shadow: inset 0 -2px var(--r127); }
+  .chunk.v131 mark { background: var(--r131-soft); box-shadow: inset 0 -2px var(--r131); }
+
+  details { margin-top: 28px; color: var(--muted); font-size: 0.9rem; }
+  details summary { cursor: pointer; }
+  details ul { padding-left: 18px; font: 0.8rem/1.7 var(--mono); }
+
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+    .evidence { position: static; }
+    select { flex: 1 1 40%; }
+    button[type=submit] { flex: 1 1 100%; margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .chunk { animation: show 160ms ease-out; }
+    @keyframes show { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Ask the Kubernetes docs, and check every claim</h1>
+    <p>Answers come only from the 1.27 and 1.31 documentation. Each claim is marked with the release it came from.
+      Select a marker to read the source passage.
+      <span class="legend"><span class="l127">1.27</span><span class="l131">1.31</span></span></p>
+  </header>
+
+  <form id="ask">
+    <textarea id="q" name="q" aria-label="Question" placeholder="For example: how far can the kubelet lag behind the API server?" required></textarea>
+    <select id="version" aria-label="Releases to search">
+      <option value="">Both releases</option>
+      <option value="1.27">1.27 only</option>
+      <option value="1.31">1.31 only</option>
+    </select>
+    <select id="topk" aria-label="Passages per release">
+      <option value="3">3 passages</option>
+      <option value="5" selected>5 passages</option>
+      <option value="8">8 passages</option>
+    </select>
+    <button type="submit" id="go">Ask</button>
+  </form>
+  <div class="examples" aria-label="Example questions">
+    <span>Try:</span>
+    <button type="button">How many minor versions may the kubelet lag behind kube-apiserver?</button>
+    <button type="button">What is the feature state of Evented PLEG?</button>
+    <button type="button">How do I mount an OCI image as a volume in a Pod?</button>
+    <button type="button">What uptime SLA does the Kubernetes API server guarantee?</button>
+    <button type="button">How do I set the kubelet --max-pod-lag flag?</button>
+  </div>
+
+  <main>
+    <section class="answer" aria-live="polite">
+      <h2>Answer</h2>
+      <div id="status" class="status"></div>
+      <div id="answer" class="prose"><p class="empty">Ask a question to see an answer here.</p></div>
+      <details id="retrieved" hidden>
+        <summary>Passages retrieved</summary>
+        <ul id="retrieved-list"></ul>
+      </details>
+    </section>
+    <aside class="evidence">
+      <h2>Source passage</h2>
+      <div id="chunk"><p class="empty">Select a 1.27 or 1.31 marker in the answer to read the passage it cites, with the quoted words highlighted.</p></div>
+    </aside>
+  </main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, kids = []) => {
+  const node = Object.assign(document.createElement(tag), props);
+  for (const k of [].concat(kids)) node.append(k);
+  return node;
+};
+const vclass = (v) => (v === "1.27" ? "v127" : "v131");
+let quotes = {};
+
+async function ask(question) {
+  $("go").disabled = true;
+  $("go").textContent = "Asking…";
+  $("status").textContent = "";
+  try {
+    const body = { question, top_k: Number($("topk").value) };
+    if ($("version").value) body.version = $("version").value;
+    const res = await fetch("/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    render(await res.json());
+  } catch (err) {
+    $("answer").replaceChildren(el("p", { className: "refused", textContent: "The service didn't respond. Check that it is running, then ask again." }));
+  } finally {
+    $("go").disabled = false;
+    $("go").textContent = "Ask";
+  }
+}
+
+function render(data) {
+  quotes = {};
+  for (const c of data.citations) (quotes[c.chunk_id] ||= []).push(c.quote);
+  const secs = (data.latency_ms / 1000).toFixed(1);
+  $("status").textContent = data.refused
+    ? `Not answered, ${secs} s`
+    : `Answered from ${new Set(data.citations.map((c) => c.version)).size === 2 ? "both releases" : "release " + data.citations[0].version}, ${secs} s`;
+
+  if (data.refused) {
+    $("answer").replaceChildren(el("p", { className: "refused", textContent: data.answer }));
+  } else {
+    const p = el("p");
+    const parts = data.answer.split(/(\[[^\]]+#c\d+\])/);
+    for (const part of parts) {
+      const m = part.match(/^\[(v(1\.\d+):[^\]]+)\]$/);
+      if (m) {
+        const btn = el("button", { type: "button", className: `cite ${vclass(m[2])}`, textContent: m[2], title: m[1] });
+        btn.setAttribute("aria-pressed", "false");
+        btn.setAttribute("aria-label", `Source in release ${m[2]}: ${m[1]}`);
+        btn.addEventListener("click", () => openChunk(m[1], btn));
+        p.append(btn);
+      } else if (part) {
+        p.append(part);
+      }
+    }
+    $("answer").replaceChildren(p);
+    const first = p.querySelector(".cite");
+    if (first) openChunk(first.title, first);
+  }
+  const list = $("retrieved-list");
+  list.replaceChildren(...data.retrieved_chunk_ids.map((id) => el("li", { textContent: id })));
+  $("retrieved").hidden = data.retrieved_chunk_ids.length === 0;
+}
+
+async function openChunk(id, btn) {
+  document.querySelectorAll(".cite").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+  const res = await fetch("/chunk?id=" + encodeURIComponent(id));
+  const c = await res.json();
+  if (c.error) {
+    $("chunk").replaceChildren(el("p", { className: "empty", textContent: c.error }));
+    return;
+  }
+  const pre = el("pre");
+  const marks = (quotes[id] || []).filter((q) => c.text.includes(q));
+  let rest = c.text;
+  for (const q of marks.sort((a, b) => c.text.indexOf(a) - c.text.indexOf(b))) {
+    const at = rest.indexOf(q);
+    if (at < 0) continue;
+    pre.append(rest.slice(0, at), el("mark", { textContent: q }));
+    rest = rest.slice(at + q.length);
+  }
+  pre.append(rest);
+  $("chunk").replaceChildren(
+    el("div", { className: `chunk ${vclass(c.version)}` }, [
+      el("p", { className: "where", textContent: `Kubernetes ${c.version}: ${c.title} › ${c.section}` }),
+      el("p", { className: "id", textContent: c.chunk_id }),
+      pre,
+    ])
+  );
+  pre.querySelector("mark")?.scrollIntoView({ block: "nearest" });
+}
+
+$("ask").addEventListener("submit", (e) => { e.preventDefault(); ask($("q").value.trim()); });
+$("q").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("ask").requestSubmit(); });
+document.querySelectorAll(".examples button").forEach((b) =>
+  b.addEventListener("click", () => { $("q").value = b.textContent; ask(b.textContent); })
+);
+</script>
+</body>
+</html>

@@ -12,15 +12,17 @@ import logging
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from app.schemas import AskResponse
 
 log = logging.getLogger("aion")
+UI_PAGE = Path(__file__).parent / "ui" / "index.html"
 STATE: dict[str, Any] = {}
 
 
@@ -32,7 +34,9 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
     try:
         STATE["pipeline"] = load_default_pipeline()
-    except (OSError, ValueError, RuntimeError) as err:  # missing index, bad files
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        # Missing index, a model that can't be downloaded, bad files... The server
+        # still starts, /healthz still answers, and /ask returns a clear refusal.
         log.error("pipeline failed to load: %s", err)
         STATE["load_error"] = str(err)
     yield
@@ -50,6 +54,25 @@ def _refusal(message: str, started: float) -> AskResponse:
         retrieved_chunk_ids=[],
         latency_ms=round((time.perf_counter() - started) * 1000),
     )
+
+
+@app.get("/", include_in_schema=False)
+def ui() -> FileResponse:
+    """A small page for asking questions and reading the cited passages."""
+    return FileResponse(UI_PAGE)
+
+
+@app.get("/chunk")
+def chunk(chunk_id: str = "", id: str = "") -> JSONResponse:  # pylint: disable=redefined-builtin
+    """Full text of one indexed chunk, so a citation can be checked against its source."""
+    pipeline = STATE.get("pipeline")
+    wanted = chunk_id or id
+    found = pipeline.retriever.chunks.get(wanted) if pipeline is not None else None
+    if found is None:
+        return JSONResponse(
+            {"error": f"No chunk with id {wanted!r} in the index."}, status_code=404
+        )
+    return JSONResponse(found.to_dict())
 
 
 @app.get("/healthz")
@@ -72,7 +95,11 @@ async def ask(request: Request) -> JSONResponse:
 
     pipeline = STATE.get("pipeline")
     if pipeline is None:
-        resp = _refusal("The index is not loaded yet. Run `make ingest` and restart.", started)
+        resp = _refusal(
+            "The index or models failed to load, so nothing can be answered yet. "
+            "Run `make ingest`, check the server log, and restart.",
+            started,
+        )
         return JSONResponse(resp.model_dump())
 
     try:
