@@ -41,7 +41,7 @@ serve:
 > uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8080}
 
 eval:
-> LLM_CACHE_DIR=$${LLM_CACHE_DIR:-eval/.llm_cache} $(PY) -m eval.run_eval
+> LLM_FALLBACK_MODEL= LLM_CACHE_DIR=$${LLM_CACHE_DIR:-eval/.llm_cache} $(PY) -m eval.run_eval
 
 bench:
 > $(PY) benchmarks/bench_gpu.py

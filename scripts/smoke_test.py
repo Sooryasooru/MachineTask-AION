@@ -41,6 +41,8 @@ def main() -> int:
     """Print one line per scenario; exit non-zero if any response breaks the schema."""
     health = httpx.get(f"{BASE}/healthz", timeout=10)
     print(f"healthz            {health.status_code} {health.json()}")
+    ready = httpx.get(f"{BASE}/readyz", timeout=10)
+    print(f"readyz             {ready.status_code} {ready.json()}")
     failures = 0
     for name, body in CASES:
         if isinstance(body, str):

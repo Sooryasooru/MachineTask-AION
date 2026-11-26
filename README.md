@@ -49,7 +49,7 @@ Add `"version": "1.27"` or `"1.31"` to search only one release.
 | `make eval` | Runs my question set and writes `eval_report.json` |
 | `make recall` | Measures retrieval on its own, for each search mode |
 | `make smoke` | Runs the brief's edge cases against a running server |
-| `make check` | Lint, type checks and 65 tests |
+| `make check` | Lint, type checks and 68 tests |
 
 All settings are environment variables (see `.env.example`).
 
@@ -179,6 +179,8 @@ Everything the brief asks for, plus these extras:
 - A `version` option to search one release
 - A second set of questions written after seeing failures
 - A web page where citations open their source passage
+
+**Reliability.** `/readyz` reports whether the index and models actually loaded, and the Docker health check uses it. If the main model keeps failing, the service retries once with a smaller fallback model (`LLM_FALLBACK_MODEL`; switched off during `make eval` so the numbers come from one model). Each request writes one log line with its outcome and latency.
 
 Every request gets a proper response, never a crash: an empty question, 4,000
 characters, another language, broken JSON or the model being unavailable all

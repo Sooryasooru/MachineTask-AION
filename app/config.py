@@ -25,6 +25,8 @@ class Settings:
     # Any OpenAI-compatible chat endpoint: Groq, Ollama (/v1), Gemini, OpenRouter...
     llm_base_url: str = _env("LLM_BASE_URL", "https://api.groq.com/openai/v1")
     llm_model: str = _env("LLM_MODEL", "openai/gpt-oss-120b")
+    # Used only when the main model keeps failing. Empty disables it (make eval does).
+    llm_fallback_model: str = _env("LLM_FALLBACK_MODEL", "openai/gpt-oss-20b")
     llm_api_key: str = _env("LLM_API_KEY", "")
     llm_timeout_s: float = float(_env("LLM_TIMEOUT_S", "60"))
     llm_max_tokens: int = int(_env("LLM_MAX_TOKENS", "2500"))

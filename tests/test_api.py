@@ -16,6 +16,11 @@ class FakePipeline:
             raise RuntimeError("unexpected")
         return AskResponse(answer=f"got {question!r}", refused=True)
 
+    def ask_traced(
+        self, question: object, top_k: object = 5, version: object = None
+    ) -> tuple[AskResponse, dict[str, object]]:
+        return self.ask(question, top_k, version), {"refusal": "test"}
+
 
 def client() -> TestClient:
     STATE["pipeline"] = FakePipeline()
@@ -71,3 +76,12 @@ def test_chunk_lookup() -> None:
     ok = c.get("/chunk", params={"id": "v1.31:releases/skew#c1"})
     assert ok.status_code == 200 and ok.json()["version"] == "1.31"
     assert c.get("/chunk", params={"id": "nope"}).status_code == 404
+
+
+def test_readyz_reports_loaded_and_not_loaded() -> None:
+    assert client().get("/readyz").status_code == 200
+    STATE.pop("pipeline", None)
+    STATE["load_error"] = "index missing"
+    resp = TestClient(app).get("/readyz")
+    assert resp.status_code == 503 and resp.json()["error"] == "index missing"
+    STATE.pop("load_error", None)

@@ -1,0 +1,25 @@
+{
+  "answerable": true,
+  "sentences": [
+    {
+      "text": "On 1.27, the Evented PLEG feature is in beta.",
+      "citations": [
+        {
+          "chunk_id": "v1.27:tasks/administer-cluster/switch-to-evented-pleg#c1",
+          "quote": "FEATURE STATE: Kubernetes v1.27 [beta]"
+        }
+      ]
+    },
+    {
+      "text": "On 1.31, the Evented PLEG feature is in alpha.",
+      "citations": [
+        {
+          "chunk_id": "v1.31:tasks/administer-cluster/switch-to-evented-pleg#c1",
+          "quote": "FEATURE STATE: Kubernetes v1.25 [alpha] (feature gate `EventedPLEG`)"
+        }
+      ]
+    }
+  ],
+  "gaps": [],
+  "missing": ""
+}

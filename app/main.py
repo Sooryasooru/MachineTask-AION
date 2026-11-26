@@ -21,6 +21,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.schemas import AskResponse
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("aion")
 UI_PAGE = Path(__file__).parent / "ui" / "index.html"
 STATE: dict[str, Any] = {}
@@ -77,8 +78,19 @@ def chunk(chunk_id: str = "", id: str = "") -> JSONResponse:  # pylint: disable=
 
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
-    """Liveness check."""
+    """Liveness: the process is up."""
     return {"status": "ok"}
+
+
+@app.get("/readyz")
+def readyz() -> JSONResponse:
+    """Readiness: the index and models loaded, so /ask can actually answer."""
+    if STATE.get("pipeline") is not None:
+        return JSONResponse({"status": "ready"})
+    return JSONResponse(
+        {"status": "not ready", "error": STATE.get("load_error", "still starting")},
+        status_code=503,
+    )
 
 
 @app.post("/ask", response_model=AskResponse)
@@ -103,8 +115,15 @@ async def ask(request: Request) -> JSONResponse:
         return JSONResponse(resp.model_dump())
 
     try:
-        resp = await run_in_threadpool(
-            pipeline.ask, body.get("question", ""), body.get("top_k", 5), body.get("version")
+        resp, trace = await run_in_threadpool(
+            pipeline.ask_traced, body.get("question", ""), body.get("top_k", 5), body.get("version")
+        )
+        log.info(
+            "ask refused=%s reason=%s citations=%d latency_ms=%d",
+            resp.refused,
+            trace.get("refusal", "-"),
+            len(resp.citations),
+            resp.latency_ms,
         )
     except Exception:  # pylint: disable=broad-exception-caught  # last line of defence
         log.exception("unexpected error while answering")
