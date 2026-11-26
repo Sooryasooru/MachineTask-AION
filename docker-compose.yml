@@ -1,0 +1,23 @@
+# One command to build and run everything:  docker compose up --build
+# The API key comes from .env if there is one, or from your shell:
+#   LLM_API_KEY=your-key docker compose up --build
+services:
+  app:
+    build: .
+    image: aion-docs-assistant
+    ports:
+      - "${PORT:-8080}:8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      PORT: "8080"
+      DEVICE: cpu
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    restart: unless-stopped

@@ -127,6 +127,8 @@ My own laptop: HP Pavilion 14, 12th-gen Intel, 8 GB RAM, no GPU. The model was
 | Right page found in top 5 (retrieval only) | **100%** | 100% |
 | Slowest 5% of answers | 17 s | 15 s |
 
+**How answers are scored.** Automatically, with no AI judge: a question that should be refused counts as correct only if it is refused with no citations; an answerable one only if the answer contains the expected facts, and for version questions names and cites both releases. Details in [docs/evaluation.md](docs/evaluation.md).
+
 Answers usually take 2–5 seconds. The 17 s figure includes waiting on the free
 tier's rate limit.
 
@@ -181,6 +183,7 @@ return the normal format. Rebuilding the index gives identical files every time.
   shorter quotes are the next things I'd try.
 - **Half-answers on version questions.** If one release's sentence fails its
   check, the answer covers only the other release (T-06, T-07).
+- **Absence statements have no citation.** A line like "The 1.27 documentation excerpts do not cover this" carries no `[chunk_id]`, because there is no passage to quote for something missing. Only that fixed form is allowed through without one.
 - **Example files aren't included.** Some task pages point to YAML files I didn't
   ingest.
 - **Free-tier limits.** Groq allows about one full eval run per day, which is one

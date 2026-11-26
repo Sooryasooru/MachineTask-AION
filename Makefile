@@ -76,3 +76,6 @@ docker-run:
 clean:
 > rm -rf index/* .pytest_cache .mypy_cache .ruff_cache
 > touch index/.gitkeep
+
+up:
+> docker compose up --build
