@@ -20,6 +20,8 @@ import httpx
 from app.config import settings
 
 MAX_ATTEMPTS = 8
+# Counted so a report can say whether its numbers came from live calls or a replay.
+STATS = {"cache_hits": 0, "live_calls": 0}
 FALLBACK_AFTER = 3  # attempts on the main model before switching, when a fallback is set
 
 
@@ -50,6 +52,7 @@ def _call_model(model: str, messages: list[dict[str, str]], attempts: int) -> st
         payload["reasoning_effort"] = settings.llm_reasoning_effort
     cache = _cache_path(payload)
     if cache and cache.exists():
+        STATS["cache_hits"] += 1
         return cache.read_text(encoding="utf-8")
 
     headers = {"Authorization": f"Bearer {settings.llm_api_key}"} if settings.llm_api_key else {}
@@ -79,6 +82,7 @@ def _call_model(model: str, messages: list[dict[str, str]], attempts: int) -> st
             content = str(resp.json()["choices"][0]["message"]["content"])
         except (KeyError, IndexError, ValueError) as err:
             raise LLMError(f"{model}: unexpected response shape: {err}") from err
+        STATS["live_calls"] += 1
         if cache:
             cache.parent.mkdir(parents=True, exist_ok=True)
             cache.write_text(content, encoding="utf-8")

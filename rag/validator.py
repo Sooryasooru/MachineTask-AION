@@ -17,6 +17,7 @@ letting new numbers or maturity claims through.
 
 from __future__ import annotations
 
+import difflib
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ from rag.retriever import tokenize
 NliFn = Callable[[Sequence[tuple[str, str]]], Sequence[tuple[float, float, float]]]
 
 MIN_QUOTE_WORDS = 3
+ALIGN_MIN_RATIO = 0.9  # how close a near-verbatim quote must be to snap to the real text
 NEUTRAL_COVERAGE = 0.6
 PREMISE_WINDOW = 500  # characters kept either side of the quote
 _SKIP_CHARS = {"`", "*"}
@@ -93,10 +95,7 @@ def _normalise_with_map(text: str) -> tuple[str, list[int]]:
     return "".join(out), index
 
 
-def locate_quote(chunk_text: str, quote: str) -> tuple[int, int] | None:
-    """Find the quote in the chunk; return the (start, end) span in the original text."""
-    if len(quote.split()) < MIN_QUOTE_WORDS:
-        return None
+def _exact_span(chunk_text: str, quote: str) -> tuple[int, int] | None:
     start = chunk_text.find(quote)
     if start >= 0:
         return start, start + len(quote)
@@ -108,6 +107,45 @@ def locate_quote(chunk_text: str, quote: str) -> tuple[int, int] | None:
     if pos < 0:
         return None
     return mapping[pos], mapping[pos + len(norm_quote) - 1] + 1
+
+
+def _aligned_span(chunk_text: str, quote: str) -> tuple[int, int] | None:
+    """Closest real span to a near-verbatim quote, or None if nothing is close enough.
+
+    The model sometimes drops a word or joins two lines inside a quote. Rather than
+    throwing the sentence away, find the span of the chunk that the quote was clearly
+    copied from. It must be at least ALIGN_MIN_RATIO similar, and it must state the
+    same numbers and maturity words, so a quote can never be "aligned" onto a
+    different fact. The returned quote is always the chunk's own text.
+    """
+    words = [(m.start(), m.end()) for m in re.finditer(r"\S+", chunk_text)]
+    target = " ".join(quote.lower().split())
+    n = len(quote.split())
+    best_ratio, best_start, best_end = 0.0, -1, -1
+    for size in range(max(MIN_QUOTE_WORDS, n - 3), n + 4):
+        for i in range(0, max(len(words) - size + 1, 0)):
+            start, end = words[i][0], words[i + size - 1][1]
+            candidate = " ".join(chunk_text[start:end].lower().split())
+            ratio = difflib.SequenceMatcher(None, target, candidate).ratio()
+            if ratio > best_ratio:
+                best_ratio, best_start, best_end = ratio, start, end
+    if best_ratio < ALIGN_MIN_RATIO:
+        return None
+    span_text = chunk_text[best_start:best_end]
+    if numbers_in(quote) != numbers_in(span_text) or stages_in(quote) != stages_in(span_text):
+        return None
+    return best_start, best_end
+
+
+def locate_quote(chunk_text: str, quote: str) -> tuple[int, int] | None:
+    """Find the quote in the chunk; return the (start, end) span in the original text.
+
+    Exact match first, then whitespace/markdown-insensitive, then near-verbatim
+    alignment. Whatever matches, the caller gets a span of the chunk's own text.
+    """
+    if len(quote.split()) < MIN_QUOTE_WORDS:
+        return None
+    return _exact_span(chunk_text, quote) or _aligned_span(chunk_text, quote)
 
 
 def _content_words(text: str) -> set[str]:
@@ -165,10 +203,14 @@ def verify_citations(
 def validate_with_report(
     sentences: Sequence[DraftSentence],
     retrieved: dict[str, Chunk],
-    nli: NliFn,
+    nli: NliFn | None,
     entail_threshold: float,
 ) -> tuple[list[VerifiedSentence], list[dict[str, object]]]:
-    """Like `validate`, plus one verdict per proposed sentence saying why it stayed or went."""
+    """Like `validate`, plus one verdict per proposed sentence saying why it stayed or went.
+
+    With `nli=None` the support check is skipped and only the quote, number and
+    maturity checks apply (used for the NLI ablation).
+    """
     verdicts: list[dict[str, object]] = []
     candidates = []
     for s in sentences:
@@ -193,7 +235,7 @@ def validate_with_report(
         (" ".join(_premise(c) for c in cites), strip_version_prefix(s.text))
         for s, cites in candidates
     ]
-    scores = nli(pairs)
+    scores = nli(pairs) if nli is not None else [(0.0, 1.0, 0.0)] * len(pairs)
 
     kept: list[VerifiedSentence] = []
     for (sentence, cites), (contradiction, entailment, neutral) in zip(
@@ -231,7 +273,7 @@ def validate_with_report(
 def validate(
     sentences: Sequence[DraftSentence],
     retrieved: dict[str, Chunk],
-    nli: NliFn,
+    nli: NliFn | None,
     entail_threshold: float,
 ) -> list[VerifiedSentence]:
     """Return the sentences that keep a verified citation and are supported by it."""

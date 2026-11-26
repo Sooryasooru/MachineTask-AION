@@ -31,6 +31,7 @@ import psutil
 
 from app.config import settings
 from eval.metrics import gold_hit, gold_hit_every_version, load_questions, percentile, rate
+from rag import llm
 from rag.pipeline import Pipeline, load_default_pipeline
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -58,6 +59,15 @@ def score(q: dict[str, Any], resp: dict[str, Any]) -> bool:
         cited = {c["version"] for c in resp["citations"]}
         return {"1.27", "1.31"} <= cited and "1.27" in text and "1.31" in text
     return True
+
+
+def validator_confidence(trace: dict[str, Any]) -> float | None:
+    """Share of the model's drafted sentences that survived checking (None if no draft)."""
+    drafted = len(trace.get("draft", {}).get("sentences", []))
+    if not drafted:
+        return None
+    kept = sum(1 for v in trace.get("verdicts", []) if v.get("kept"))
+    return round(kept / drafted, 3)
 
 
 def citation_checks(resp: dict[str, Any], chunks: dict[str, str]) -> tuple[list[bool], bool]:
@@ -93,6 +103,7 @@ def run_split(
                 "correct": score(q, resp),
                 "refused": resp["refused"],
                 "confidence": round(result.top_score(), 4),
+                "validator_confidence": validator_confidence(trace),
                 "gold_retrieved": retrieved,
                 "both_versions_retrieved": (
                     gold_hit_every_version(gold, result, pipeline.retriever.aliases)
@@ -134,12 +145,22 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
         key=lambda r: (r["refused"], -r["confidence"]),  # answered-and-wrong first
     )[:3]
 
+    # Confidence from the validator, not retrieval: what share of the drafted sentences
+    # survived checking. Retrieval scores were almost all near 1.0 and told us little.
     buckets = []
-    for lo, hi in ((0.0, 0.9), (0.9, 0.99), (0.99, 1.01)):
-        inside = [r for r in answered if lo <= r["confidence"] < hi]
+    for lo, hi, label in (
+        (0.0, 0.5, "under half kept"),
+        (0.5, 1.0, "half or more kept"),
+        (1.0, 1.01, "all kept"),
+    ):
+        inside = [
+            r
+            for r in answered
+            if r["validator_confidence"] is not None and lo <= r["validator_confidence"] < hi
+        ]
         buckets.append(
             {
-                "confidence": f"[{lo}, {min(hi, 1.0)}]",
+                "drafted_sentences_kept": label,
                 "answered": len(inside),
                 "accuracy": rate([r["correct"] for r in inside]),
             }
@@ -161,6 +182,13 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "refusal_rate_on_unanswerable": rate([r["refused"] for r in refuse]),
         "false_refusal_rate": rate([r["refused"] for r in answer]),
         "hallucination_rate": rate([not r["refused"] and not r["correct"] for r in rows]),
+        # The two parts of the hallucination rate, kept apart so they can be read separately.
+        "answered_but_should_refuse_rate": rate(
+            [not r["refused"] for r in refuse] + [False] * len(answer)
+        ),
+        "answered_but_incomplete_rate": rate(
+            [not r["refused"] and not r["correct"] for r in answer] + [False] * len(refuse)
+        ),
         "version_conflict_pass": f"{sum(r['correct'] for r in conflicts)}/{len(conflicts)}",
         "citation_validity": rate(all_cites) if all_cites else None,
         "citations_checked": len(all_cites),
@@ -198,6 +226,7 @@ def machine() -> dict[str, Any]:
         "nli_model": settings.nli_model,
         "llm": f"{settings.llm_model} @ {settings.llm_base_url}",
         "refusal_threshold": settings.refusal_threshold,
+        "nli_enabled": settings.nli_enabled,
     }
 
 
@@ -216,6 +245,13 @@ def main() -> None:
         print(f"\n== {split} ({len(questions)} questions)")
         report["splits"][split] = run_split(pipeline, questions, chunks, split)
     report["runtime_s"] = round(time.time() - started)
+    live, hits = llm.STATS["live_calls"], llm.STATS["cache_hits"]
+    report["llm_replies"] = {
+        "live_calls": live,
+        "replayed_from_cache": hits,
+        "mode": "replay" if hits and not live else "live" if live and not hits else "mixed",
+        "note": "in a replay, latency excludes the model call; see the README for live latency",
+    }
 
     out = ROOT / "eval_report.json"
     out.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

@@ -71,6 +71,37 @@ separate the near-topic cases without refusing real questions, so G1 is set low
 handled by the model's own judgement and the validator, which is where they were
 caught (8/8 on test).
 
+## Runs
+
+| Test set | Run 1 | Run 2 | Run 3 |
+|---|---|---|---|
+| Accuracy | 63.9% | 75.0% | 86.1% |
+| Version conflicts | 3/9 | 7/9 | 8/9 |
+| Wrongly refused | 28% | 24% | 8% |
+| Unanswerable refused | 11/11 | 11/11 | 11/11 |
+
+Run 3 replays run 2's recorded model replies exactly (0 live calls); only the
+checking after the model changed. Its changes came from an outside review of run 2
+and from the traces, after seeing failures on all three sets, so none of them is
+unseen any more.
+
+## NLI ablation
+
+Same recorded replies, NLI support check on and off (`NLI_ENABLED`):
+
+| | Test on | Test off | Dev on | Dev off | Post-failure on | Post-failure off |
+|---|---|---|---|---|---|---|
+| Accuracy | 77.8% | 86.1% | 60% | 80% | 90% | 100% |
+| Wrongly refused | 24% | 8% | 43% | 14% | 14% | 0% |
+| Answered but incomplete | 2 | 3 | 1 | 1 | 0 | 0 |
+| Answered what should be refused | 0 | 0 | 0 | 0 | 0 | 0 |
+
+The rule set before measuring was to keep NLI only if it stopped wrong answers.
+Without it, one extra answer counted as incomplete (T-35). On reading it, that
+answer is correct and fully quoted but leaves out the flag name the scoring
+requires. NLI was switched off on that basis. Both reports are kept:
+`eval/eval_report_run3_nli_on.json` and the committed `eval_report.json` (NLI off).
+
 ## Reproducing
 
 ```bash

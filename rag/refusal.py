@@ -59,9 +59,19 @@ def check_input(question: str, vocabulary: Collection[str]) -> Refusal | None:
     return None
 
 
+GATE_WORD_RE = re.compile(r"\bgates?\b", re.I)
+
+
 def named_terms(question: str) -> set[str]:
-    """Flags, CamelCase identifiers and backticked tokens the question names."""
-    terms = set(FLAG_RE.findall(question)) | set(CAMEL_RE.findall(question))
+    """Flags and backticked tokens the question names, plus CamelCase names of gates.
+
+    CamelCase is only treated as a claimed identifier when the question talks about
+    a feature gate. Otherwise product names like PostgreSQL or GitHub would be
+    refused as "not documented" when the question is really about something else.
+    """
+    terms = set(FLAG_RE.findall(question))
+    if GATE_WORD_RE.search(question):
+        terms |= set(CAMEL_RE.findall(question))
     terms |= {t.strip() for t in BACKTICK_RE.findall(question) if " " not in t.strip()}
     return {t.lower() for t in terms if t}
 

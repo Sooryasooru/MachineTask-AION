@@ -28,12 +28,25 @@ from rag.refusal import (
     clean_question,
 )
 from rag.retriever import Hit, Retrieval, Retriever, tokenize
-from rag.validator import NliFn, VerifiedSentence, validate_with_report
+from rag.validator import (
+    NliFn,
+    VerifiedCitation,
+    VerifiedSentence,
+    stages_in,
+    validate_with_report,
+)
 
 LlmFn = Callable[[list[dict[str, str]]], str]
 Trace = dict[str, Any]
 MAX_TOP_K = 10
 COUNTERPARTS_PER_VERSION = 2
+FEATURE_STATE_RE = re.compile(
+    r"FEATURE STATE: Kubernetes v[\d.]+ \[\w+\](?: \(feature gate `[^`]+`\))?"
+)
+MATURITY_QUESTION_RE = re.compile(
+    r"\b(feature state|maturity|alpha|beta|stable|ga|generally available|deprecated|still use)\b",
+    re.I,
+)
 _GAP_RE = re.compile(
     r"\b1\.\d+\b.*\b(?:do(?:es)? not|don't|doesn't)\b.*\b(?:cover|mention|document|describe)", re.I
 )
@@ -102,6 +115,52 @@ class Pipeline:
                     if twin and twin.chunk_id not in have:
                         context[other].append(Hit(twin, hit.score))
         return context
+
+    def complete_versions(
+        self, question: str, kept: list[VerifiedSentence]
+    ) -> list[VerifiedSentence]:
+        """Add the other release's feature state when an answer covers only one release.
+
+        The model sometimes answers for one release and its sentence for the other
+        doesn't survive checking (T-06, T-07 in run 2), which leaves exactly the
+        one-sided answer the brief warns about. When the other release's twin of a
+        cited section states a different feature state, code adds that line, quoted
+        verbatim and cited. Nothing here is generated, so it can't be made up.
+        """
+        cited_versions = {c.chunk.version for s in kept for c in s.citations}
+        if len(cited_versions) != 1 or len(self.retriever.versions) < 2:
+            return []
+        (version,) = cited_versions
+        answer_text = " ".join(s.text for s in kept)
+        added: list[VerifiedSentence] = []
+        seen: set[str] = set()
+        for sentence in kept:
+            for cite in sentence.citations:
+                own = FEATURE_STATE_RE.findall(cite.chunk.text)
+                if not own and not MATURITY_QUESTION_RE.search(question):
+                    continue
+                own_stages = stages_in(" ".join(own) + " " + answer_text)
+                for other in self.retriever.versions:
+                    if other == version:
+                        continue
+                    twin = self.retriever.counterpart(cite.chunk, other)
+                    if twin is None or twin.chunk_id in seen:
+                        continue
+                    for match in FEATURE_STATE_RE.finditer(twin.text):
+                        if stages_in(match.group(0)) <= own_stages:
+                            continue
+                        seen.add(twin.chunk_id)
+                        quote = match.group(0)
+                        added.append(
+                            VerifiedSentence(
+                                f"On {other}, the same section states {quote}",
+                                (VerifiedCitation(twin, quote, match.start(), match.end()),),
+                                1.0,
+                                1.0,
+                            )
+                        )
+                        break
+        return added
 
     def ask_traced(
         self, raw_question: object, top_k: object = 5, version: object = None
@@ -177,7 +236,10 @@ class Pipeline:
         retrieved.update({h.chunk.chunk_id: h.chunk for h in result.all_hits()})
         kept, verdicts = (
             validate_with_report(
-                draft.sentences, retrieved, self.nli, settings.nli_entail_threshold
+                draft.sentences,
+                retrieved,
+                self.nli if settings.nli_enabled else None,
+                settings.nli_entail_threshold,
             )
             if draft.answerable
             else ([], [])
@@ -193,7 +255,13 @@ class Pipeline:
                 ),
                 ids,
             )
-        answer, citations = assemble(kept, allowed_gaps(draft.gaps, self.retriever.versions))
+        completed = self.complete_versions(question, kept)
+        trace["completed"] = [c.text for c in completed]
+        gaps = allowed_gaps(draft.gaps, self.retriever.versions)
+        if completed:  # the other release is now covered, so drop "doesn't cover this" lines
+            covered = {c.chunk.version for s in completed for c in s.citations}
+            gaps = [g for g in gaps if not any(v in g for v in covered)]
+        answer, citations = assemble(kept + completed, gaps)
         return done(answer, False, citations, ids)
 
 

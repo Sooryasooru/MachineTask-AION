@@ -1,10 +1,11 @@
 # CPU image so it runs on any reviewer machine. The models are small enough for that.
-FROM python:3.11-slim
+# Python 3.12 matches the version the numbers in the README were measured on.
+FROM python:3.12-slim
 
 WORKDIR /srv
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080 DEVICE=cpu
 
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

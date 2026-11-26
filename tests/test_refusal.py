@@ -27,7 +27,11 @@ def test_other_languages_are_refused() -> None:
 
 def test_invented_flag_and_gate_are_false_premises() -> None:
     assert check_false_premise("How do I set --max-pod-lag?", TERMS) is not None
-    assert check_false_premise("What does PodAutoRepair do?", TERMS) is not None
+    assert check_false_premise("What does the PodAutoRepair feature gate do?", TERMS) is not None
+
+
+def test_product_names_are_not_false_premises() -> None:
+    assert check_false_premise("Can a StatefulSet run PostgreSQL?", TERMS) is None
 
 
 def test_real_terms_pass() -> None:

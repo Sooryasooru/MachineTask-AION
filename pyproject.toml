@@ -27,8 +27,8 @@ max-line-length = 100
 # Settings holds every env var in one place, and the pipeline's ask() reads top to
 # bottom on purpose, so both limits are a little looser than the defaults.
 [tool.pylint.design]
-max-attributes = 20
-max-locals = 25
+max-attributes = 25
+max-locals = 30
 
 [tool.pylint."messages control"]
 disable = ["too-few-public-methods", "fixme"]

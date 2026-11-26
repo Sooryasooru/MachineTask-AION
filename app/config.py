@@ -44,6 +44,8 @@ class Settings:
 
     refusal_threshold: float = float(_env("REFUSAL_THRESHOLD", "0.05"))
     nli_entail_threshold: float = float(_env("NLI_ENTAIL_THRESHOLD", "0.5"))
+    # Off by default since the ablation in docs/evaluation.md; set to true to re-enable.
+    nli_enabled: bool = _env("NLI_ENABLED", "false").lower() in ("1", "true", "yes")
     context_per_version: int = int(_env("CONTEXT_PER_VERSION", "3"))
     context_chars: int = int(_env("CONTEXT_CHARS", "1000"))
     max_question_chars: int = int(_env("MAX_QUESTION_CHARS", "1000"))

@@ -13,7 +13,9 @@ requirements, the design decisions and the testing; Claude wrote most of the cod
   - retrieve each release independently, then pair results by `doc_id`
   - check false premises against the whole corpus, not just what was retrieved
   - add a semantic (NLI) support check next to exact-quote matching, and drop
-    unsupported claims instead of repairing quotes
+    unsupported claims instead of repairing quotes (after an outside review of
+    run 2, I ablated NLI and switched it off, and allowed near-verbatim quotes to
+    align to the real text)
   - keep dev and test strictly apart, and report the post-failure slice separately
 - **Compared the tools before committing.** Embedding models, vector stores, LLM
   providers and rerankers. I benchmarked the models on my own laptop first, and that

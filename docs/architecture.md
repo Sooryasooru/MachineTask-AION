@@ -35,17 +35,24 @@ response schema.
 For each proposed sentence:
 
 - **Citation check.** The chunk id must be one that was in context, and the quote
-  must occur in that chunk. Matching ignores whitespace, curly quotes and markdown
-  backticks or asterisks, but the quote that's returned is cut from the chunk's own
-  text, so it's always an exact substring.
+  must occur in that chunk. Matching first ignores whitespace, curly quotes and
+  markdown backticks or asterisks. If that fails, a near-verbatim quote (a dropped
+  word, two lines joined) is aligned to the closest real span, but only when it is at
+  least 90% similar and states the same numbers and maturity words. Either way, the
+  quote that's returned is cut from the chunk's own text, so it's always an exact
+  substring.
 - **Numbers and maturity.** Every number and every maturity word (alpha, beta,
-  stable, deprecated, GA) in the sentence must appear in the cited text. NLI models
-  are unreliable on exactly these, and they are exactly what differs between releases.
-- **Support.** An NLI model (`nli-deberta-v3-small`) compares the cited text with
-  the sentence. Contradiction drops it. Entailment keeps it. Neutral keeps it only
-  if at least 60% of its content words come from the quotes or the cited page's
-  title and heading. That last part exists because a line like
-  `FEATURE STATE: Kubernetes v1.30 [beta]` never names its subject; the heading does.
+  stable, deprecated, GA) in the sentence must appear in the cited text. These are
+  exactly what differs between releases.
+- **Support (optional).** An NLI model (`nli-deberta-v3-small`) can also compare the
+  cited text with the sentence. It is off by default since run 3: the ablation showed
+  it refused correct answers without stopping any wrong ones (see
+  [evaluation.md](evaluation.md#nli-ablation)). `NLI_ENABLED=true` turns it back on.
+
+After validation, if the surviving sentences cite only one release, the pipeline
+looks at the other release's twin of each cited section. If that twin states a
+different `FEATURE STATE`, the line is added as its own sentence, quoted verbatim
+and cited. Nothing in that step is generated.
 
 Each decision is recorded in the eval traces with its scores and reason.
 

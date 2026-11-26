@@ -184,3 +184,45 @@ def test_trace_explains_dropped_sentences(index_dir: Path) -> None:
     resp, trace = make(index_dir, reply).ask_traced("How many minor versions may the kubelet lag?")
     assert resp.refused
     assert trace["verdicts"][0]["reason"] == "no verifiable citation"
+
+
+def test_one_sided_answer_gets_other_release_feature_state(tmp_path: Path) -> None:
+    corpus = tmp_path / "corpus"
+    pages = {
+        "1.27": "FEATURE STATE: Kubernetes v1.27 [beta]",
+        "1.31": "FEATURE STATE: Kubernetes v1.31 [stable]",
+    }
+    for version, state in pages.items():
+        root = corpus / version / "concepts"
+        root.mkdir(parents=True)
+        (root / "ordinals.md").write_text(
+            f"---\ntitle: Start ordinal\n---\n## Start ordinal\n{state}\n\n"
+            "You can set .spec.ordinals.start to choose the first ordinal of a StatefulSet.\n"
+        )
+        for i in range(4):
+            (root / f"f{i}.md").write_text(
+                f"---\ntitle: F{i}\n---\n## Other\nUnrelated page {i} about storage classes here.\n"
+            )
+    build_index(corpus, tmp_path / "index", fake_embed)
+    reply = json.dumps(
+        {
+            "answerable": True,
+            "sentences": [
+                {
+                    "text": "On 1.27, the start ordinal feature is beta.",
+                    "citations": [
+                        {
+                            "chunk_id": "v1.27:concepts/ordinals#c1",
+                            "quote": "FEATURE STATE: Kubernetes v1.27 [beta]",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    resp = make(tmp_path / "index", reply).ask("Is the StatefulSet start ordinal stable?")
+    assert not resp.refused
+    assert {c.version for c in resp.citations} == {"1.27", "1.31"}
+    assert "[stable]" in resp.answer
+    for cite in resp.citations:
+        assert f"[{cite.chunk_id}]" in resp.answer

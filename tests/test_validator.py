@@ -169,3 +169,24 @@ def test_wrong_maturity_is_dropped_even_with_page_context() -> None:
         FS_CHUNK.chunk_id,
     )
     assert not validate([draft], {FS_CHUNK.chunk_id: FS_CHUNK}, entail_all, 0.5)
+
+
+def test_near_verbatim_quote_snaps_to_real_text() -> None:
+    draft = sentence(
+        "The kubelet may be three minor versions older.",
+        "kubelet may be up to three minor version older than the kube-apiserver",
+    )
+    kept = validate([draft], RETRIEVED, entail_all, 0.5)
+    assert len(kept) == 1
+    assert kept[0].citations[0].quote in CHUNK.text
+
+
+def test_without_nli_the_other_checks_still_apply() -> None:
+    good = sentence(
+        "The kubelet may be three minor versions older.", "may be up to three minor versions older"
+    )
+    wrong_number = sentence(
+        "The kubelet may be five minor versions older.", "may be up to three minor versions older"
+    )
+    kept = validate([good, wrong_number], RETRIEVED, None, 0.5)
+    assert [k.text for k in kept] == [good.text]

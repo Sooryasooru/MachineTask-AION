@@ -12,7 +12,11 @@ Written as I went, not tidied up afterwards.
 | MiniLM-L6 reranker instead of `bge-reranker-base` | bge-base gave p95 retrieval of 18.8 s on this CPU and no recall gain | Somewhat weaker ordering |
 | Counterpart chunks from the other release | Run 1 showed conflicts lost because one release's section didn't make its top 3 | Larger prompts |
 | Model returns JSON, code writes the answer | Markers and citations can't drift apart | One more parsing step |
-| No quote repair | A quote that isn't in the chunk is evidence the sentence isn't grounded. Fixing the quote would hide that. | More false refusals |
+| NLI support check off by default (run 3) | The ablation showed it refused correct answers and stopped no wrong ones | Relies on the quote, number and stage checks alone |
+| Code adds the other release's feature state | Run 2 left one-sided version answers (T-06, T-07) when one sentence failed its check | Only works when the twin section states a different feature state |
+| False-premise check: flags, backticks, and CamelCase only for feature gates | CamelCase alone would refuse product names like PostgreSQL | An invented gate named without the word "gate" goes to the model instead |
+| Pinned dependency versions | The numbers should reproduce with the same libraries | Upgrades need a deliberate bump |
+| Align near-verbatim quotes, never repair content (changed in run 3) | At first no quote was ever adjusted. Run 2's traces showed correct sentences dropped over a missing word, so near-verbatim quotes (90%+ similar, same numbers and stages) now snap to the real span. The returned quote is still the chunk's own text. | A small risk of aligning a loose paraphrase; the number and stage guard limits it |
 | Numbers and maturity words must appear in cited text | NLI models are weak on numbers, and "two" vs "three" is exactly the error that matters here | Can drop a sentence that rephrases a number |
 | Term index for false premises | "Not retrieved" isn't "doesn't exist". An exact lookup over both releases is cheap and certain. | Unusual CamelCase words outside the docs get refused |
 | Language check by vocabulary, not a detector | Short technical questions confuse language detectors; corpus vocabulary doesn't | Very short non-English questions full of English terms pass |
