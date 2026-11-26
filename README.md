@@ -7,7 +7,15 @@ of guessing. If the two releases disagree, it tells you what each one says.
 
 ## Run it
 
-You need Python 3.12 and a free Groq API key (console.groq.com).
+**Quickest: one command with Docker.** Unzip, then from the project folder:
+
+```bash
+LLM_API_KEY=your-groq-key docker compose up --build
+```
+
+The first build takes 10–20 minutes because it builds the search index inside the image. Then open http://localhost:8080. A free key comes from console.groq.com; you can also put it in a `.env` file instead.
+
+**Without Docker** you need Python 3.12 and the same key:
 
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
