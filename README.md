@@ -234,7 +234,7 @@ through. Taken literally, it did: one more incomplete answer appears without it
 (T-35). I then read that answer. It's correct (create an `EncryptionConfiguration`,
 restart the API server) and fully quoted; it only leaves out the flag name the
 scoring looks for. So NLI's only real effect was refusing good answers, and it's now
-off by default (`NLI_ENABLED=true` turns it back on). I'm saying this plainly because
+removed from the code. I'm saying this plainly because
 the final call was made after reading that answer, not by the rule alone.
 
 **Search on its own** (`make recall`): keyword search alone and semantic search alone

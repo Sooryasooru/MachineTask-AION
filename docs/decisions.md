@@ -7,12 +7,13 @@ Written as I went, not tidied up afterwards.
 | CPU only | The laptop has Intel Iris Xe, no CUDA. The models are small enough. | Ingest takes about 10 minutes |
 | `bge-small-en-v1.5` embeddings | Small, good, and named in the brief | |
 | FAISS flat index on disk | No server, exact search, identical results on every rebuild | Wouldn't scale to millions of chunks, which isn't needed here |
+| Keep the reranker even though recall@3 and @5 are equal without it | Its top score is the G1 "is this answerable at all?" signal | About 1 s of CPU per question |
 | BM25 + dense with RRF | The ablation showed 0.96 → 1.00 recall@5 | Two indexes to keep in step |
 | Each release searched on its own | One release can't push the other out of the top k | Twice the retrieval work |
 | MiniLM-L6 reranker instead of `bge-reranker-base` | bge-base gave p95 retrieval of 18.8 s on this CPU and no recall gain | Somewhat weaker ordering |
 | Counterpart chunks from the other release | Run 1 showed conflicts lost because one release's section didn't make its top 3 | Larger prompts |
 | Model returns JSON, code writes the answer | Markers and citations can't drift apart | One more parsing step |
-| NLI support check off by default (run 3) | The ablation showed it refused correct answers and stopped no wrong ones | Relies on the quote, number and stage checks alone |
+| NLI support check removed (off in run 3, deleted in week two) | The ablation showed it refused correct answers and stopped no wrong ones | Relies on the quote, number and stage checks alone |
 | Code adds the other release's feature state | Run 2 left one-sided version answers (T-06, T-07) when one sentence failed its check | Only works when the twin section states a different feature state |
 | False-premise check: flags, backticks, and CamelCase only for feature gates | CamelCase alone would refuse product names like PostgreSQL | An invented gate named without the word "gate" goes to the model instead |
 | Pinned dependency versions | The numbers should reproduce with the same libraries | Upgrades need a deliberate bump |

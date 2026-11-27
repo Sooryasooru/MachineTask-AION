@@ -29,7 +29,6 @@ from rag.refusal import (
 )
 from rag.retriever import Hit, Retrieval, Retriever, tokenize
 from rag.validator import (
-    NliFn,
     VerifiedCitation,
     VerifiedSentence,
     stages_in,
@@ -77,7 +76,6 @@ class Pipeline:
 
     retriever: Retriever
     llm: LlmFn
-    nli: NliFn
     known_terms: set[str]
     vocabulary: set[str] = field(default_factory=set)
 
@@ -155,8 +153,6 @@ class Pipeline:
                             VerifiedSentence(
                                 f"On {other}, the same section states {quote}",
                                 (VerifiedCitation(twin, quote, match.start(), match.end()),),
-                                1.0,
-                                1.0,
                             )
                         )
                         break
@@ -235,14 +231,7 @@ class Pipeline:
         retrieved = {h.chunk.chunk_id: h.chunk for hs in context.values() for h in hs}
         retrieved.update({h.chunk.chunk_id: h.chunk for h in result.all_hits()})
         kept, verdicts = (
-            validate_with_report(
-                draft.sentences,
-                retrieved,
-                self.nli if settings.nli_enabled else None,
-                settings.nli_entail_threshold,
-            )
-            if draft.answerable
-            else ([], [])
+            validate_with_report(draft.sentences, retrieved) if draft.answerable else ([], [])
         )
         trace["verdicts"] = verdicts
         if not kept:  # G3
@@ -296,11 +285,10 @@ def load_default_pipeline() -> Pipeline:
     """Real models and the configured LLM."""
     # pylint: disable=import-outside-toplevel
     from rag.llm import chat_json
-    from rag.models import nli_scores
     from rag.retriever import load_default_retriever
 
     retriever = load_default_retriever(settings.index_dir)
-    return Pipeline(retriever, chat_json, nli_scores, load_known_terms(settings.index_dir))
+    return Pipeline(retriever, chat_json, load_known_terms(settings.index_dir))
 
 
 def main() -> None:

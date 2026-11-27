@@ -36,7 +36,7 @@ from rag.pipeline import Pipeline, load_default_pipeline
 
 ROOT = Path(__file__).resolve().parent.parent
 EVAL_DIR = ROOT / "eval"
-SPLITS = ("test", "dev", "postfail", "holdout")
+SPLITS = ("test", "dev", "holdout")
 SHOULD_REFUSE = {"unanswerable", "false_premise"}
 MARKER_RE = re.compile(r"\[[^\]]*#c\d+\]")
 
@@ -59,15 +59,6 @@ def score(q: dict[str, Any], resp: dict[str, Any]) -> bool:
         cited = {c["version"] for c in resp["citations"]}
         return {"1.27", "1.31"} <= cited and "1.27" in text and "1.31" in text
     return True
-
-
-def validator_confidence(trace: dict[str, Any]) -> float | None:
-    """Share of the model's drafted sentences that survived checking (None if no draft)."""
-    drafted = len(trace.get("draft", {}).get("sentences", []))
-    if not drafted:
-        return None
-    kept = sum(1 for v in trace.get("verdicts", []) if v.get("kept"))
-    return round(kept / drafted, 3)
 
 
 def citation_checks(resp: dict[str, Any], chunks: dict[str, str]) -> tuple[list[bool], bool]:
@@ -103,7 +94,6 @@ def run_split(
                 "correct": score(q, resp),
                 "refused": resp["refused"],
                 "confidence": round(result.top_score(), 4),
-                "validator_confidence": validator_confidence(trace),
                 "gold_retrieved": retrieved,
                 "both_versions_retrieved": (
                     gold_hit_every_version(gold, result, pipeline.retriever.aliases)
@@ -132,7 +122,6 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
     refuse = [r for r in rows if r["type"] in SHOULD_REFUSE]
     answer = [r for r in rows if r["type"] not in SHOULD_REFUSE]
     conflicts = [r for r in rows if r["type"] == "version_conflict"]
-    answered = [r for r in rows if not r["refused"]]
     all_cites = [v for r in rows for v in r["citations_valid"]]
 
     wrong_answerable = [r for r in answer if not r["correct"]]
@@ -144,27 +133,6 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
         (r for r in rows if not r["correct"]),
         key=lambda r: (r["refused"], -r["confidence"]),  # answered-and-wrong first
     )[:3]
-
-    # Confidence from the validator, not retrieval: what share of the drafted sentences
-    # survived checking. Retrieval scores were almost all near 1.0 and told us little.
-    buckets = []
-    for lo, hi, label in (
-        (0.0, 0.5, "under half kept"),
-        (0.5, 1.0, "half or more kept"),
-        (1.0, 1.01, "all kept"),
-    ):
-        inside = [
-            r
-            for r in answered
-            if r["validator_confidence"] is not None and lo <= r["validator_confidence"] < hi
-        ]
-        buckets.append(
-            {
-                "drafted_sentences_kept": label,
-                "answered": len(inside),
-                "accuracy": rate([r["correct"] for r in inside]),
-            }
-        )
 
     by_type: dict[str, dict[str, Any]] = {}
     for r in rows:
@@ -207,7 +175,6 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
             }
             for r in confidently_wrong
         ],
-        "confidence_buckets": buckets,
         "rows": rows,
     }
 
@@ -223,10 +190,8 @@ def machine() -> dict[str, Any]:
         "device": settings.device,
         "embed_model": settings.embed_model,
         "rerank_model": settings.rerank_model,
-        "nli_model": settings.nli_model,
         "llm": f"{settings.llm_model} @ {settings.llm_base_url}",
         "refusal_threshold": settings.refusal_threshold,
-        "nli_enabled": settings.nli_enabled,
     }
 
 

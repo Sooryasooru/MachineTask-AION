@@ -1,12 +1,12 @@
 # Evaluation method
 
-## Three question sets
+## Question sets
 
 | File | Size | Role |
 |---|---|---|
-| `eval/questions_test.jsonl` | 36 | Headline numbers. Written before the first run. |
-| `eval/questions_dev.jsonl` | 10 | The only set thresholds were looked at against (G1). |
-| `eval/questions_postfail.jsonl` | 10 | Written after run 1, before run 2. Reported on its own. |
+| `eval/questions_holdout.jsonl` | 20 | Headline numbers from now on. Written and frozen (commit `3e8ada7`) before any of the week-two changes. Drafted with AI from the docs, each answer checked by me against the source line. |
+| `eval/questions_test.jsonl` | 36 | Written before the first run. Seen during development (runs 1 to 3), so no longer unseen. |
+| `eval/questions_dev.jsonl` | 20 | Practice set for tuning: the original 10 dev questions plus the 10 written after run 1 (P-01 to P-10). |
 
 Test set by type: 9 version conflicts, 8 unanswerable, 3 false premise, 4 version
 gaps (only one release documents it), 8 factual, 4 procedural.
@@ -85,9 +85,10 @@ checking after the model changed. Its changes came from an outside review of run
 and from the traces, after seeing failures on all three sets, so none of them is
 unseen any more.
 
-## NLI ablation
+## NLI ablation (the check has since been removed)
 
-Same recorded replies, NLI support check on and off (`NLI_ENABLED`):
+Same recorded replies, NLI support check on and off. Dev and post-failure were still
+separate sets at the time:
 
 | | Test on | Test off | Dev on | Dev off | Post-failure on | Post-failure off |
 |---|---|---|---|---|---|---|
@@ -99,8 +100,9 @@ Same recorded replies, NLI support check on and off (`NLI_ENABLED`):
 The rule set before measuring was to keep NLI only if it stopped wrong answers.
 Without it, one extra answer counted as incomplete (T-35). On reading it, that
 answer is correct and fully quoted but leaves out the flag name the scoring
-requires. NLI was switched off on that basis. Both reports are kept:
-`eval/eval_report_run3_nli_on.json` and the committed `eval_report.json` (NLI off).
+requires. NLI was switched off on that basis, and in week two the code and model were
+removed entirely. The NLI-on report is kept as evidence:
+`eval/eval_report_run3_nli_on.json`.
 
 ## Reproducing
 

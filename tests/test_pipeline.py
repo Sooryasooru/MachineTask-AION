@@ -1,4 +1,4 @@
-"""End-to-end pipeline with a fake LLM and fake NLI: every path returns the schema."""
+"""End-to-end pipeline with a fake LLM: every path returns the schema."""
 
 import json
 from collections.abc import Sequence
@@ -17,10 +17,6 @@ SKEW = {
     "1.27": "The kubelet may be up to two minor versions older than kube-apiserver.",
     "1.31": "The kubelet may be up to three minor versions older than kube-apiserver.",
 }
-
-
-def entail(pairs: Sequence[tuple[str, str]]) -> list[tuple[float, float, float]]:
-    return [(0.01, 0.98, 0.01) for _ in pairs]
 
 
 def rerank(query: str, texts: Sequence[str]) -> list[float]:
@@ -51,7 +47,7 @@ def make(index_dir: Path, reply: str | Exception) -> Pipeline:
             raise reply
         return reply
 
-    return Pipeline(retriever, llm, entail, load_known_terms(index_dir))
+    return Pipeline(retriever, llm, load_known_terms(index_dir))
 
 
 def conflict_reply() -> str:

@@ -16,9 +16,8 @@ COPY corpus corpus
 
 # Build the index inside the image so the container starts ready.
 RUN python -m rag.ingest
-# Pre-download the reranker so the container starts without fetching it. (The NLI model is
-# off by default and is only fetched at startup if NLI_ENABLED=true.) Plain HTTP downloads
-# with retries; if it still fails, the build continues and the model loads at startup.
+# Pre-download the reranker so the container starts without fetching it. Plain HTTP
+# downloads with retries; if it still fails, the build continues and the model loads at startup.
 RUN for i in 1 2 3; do HF_HUB_DISABLE_XET=1 python -c "from rag.models import get_reranker; get_reranker()" && break || sleep 15; done || true
 
 EXPOSE 8080

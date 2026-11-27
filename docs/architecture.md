@@ -44,10 +44,9 @@ For each proposed sentence:
 - **Numbers and maturity.** Every number and every maturity word (alpha, beta,
   stable, deprecated, GA) in the sentence must appear in the cited text. These are
   exactly what differs between releases.
-- **Support (optional).** An NLI model (`nli-deberta-v3-small`) can also compare the
-  cited text with the sentence. It is off by default since run 3: the ablation showed
-  it refused correct answers without stopping any wrong ones (see
-  [evaluation.md](evaluation.md#nli-ablation)). `NLI_ENABLED=true` turns it back on.
+- **No NLI model.** An NLI support check was tried and removed: the ablation showed it
+  refused correct answers without stopping any wrong ones (see
+  [evaluation.md](evaluation.md)).
 
 After validation, if the surviving sentences cite only one release, the pipeline
 looks at the other release's twin of each cited section. If that twin states a

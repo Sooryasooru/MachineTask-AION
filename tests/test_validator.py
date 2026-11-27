@@ -1,6 +1,4 @@
-"""Citation checks: verbatim quotes, no repairs, numbers and support enforced."""
-
-from collections.abc import Sequence
+"""Citation checks: verbatim quotes, no repairs, numbers and maturity words enforced."""
 
 from rag.chunker import Chunk
 from rag.generator import DraftCitation, DraftSentence, parse_reply
@@ -15,18 +13,6 @@ CHUNK = Chunk(
     text="* `kubelet` may be up to three minor versions older than `kube-apiserver`.",
 )
 RETRIEVED = {CHUNK.chunk_id: CHUNK}
-
-
-def entail_all(pairs: Sequence[tuple[str, str]]) -> list[tuple[float, float, float]]:
-    return [(0.01, 0.98, 0.01) for _ in pairs]
-
-
-def neutral_all(pairs: Sequence[tuple[str, str]]) -> list[tuple[float, float, float]]:
-    return [(0.05, 0.10, 0.85) for _ in pairs]
-
-
-def contradict_all(pairs: Sequence[tuple[str, str]]) -> list[tuple[float, float, float]]:
-    return [(0.90, 0.05, 0.05) for _ in pairs]
 
 
 def sentence(text: str, quote: str, chunk_id: str = CHUNK.chunk_id) -> DraftSentence:
@@ -61,14 +47,12 @@ def test_supported_sentence_survives_with_verbatim_quote() -> None:
             )
         ],
         RETRIEVED,
-        entail_all,
-        0.5,
     )
     assert len(kept) == 1
     assert kept[0].citations[0].quote in CHUNK.text
 
 
-def test_wrong_number_is_dropped_even_if_nli_agrees() -> None:
+def test_wrong_number_is_dropped() -> None:
     kept = validate(
         [
             sentence(
@@ -77,38 +61,8 @@ def test_wrong_number_is_dropped_even_if_nli_agrees() -> None:
             )
         ],
         RETRIEVED,
-        entail_all,
-        0.5,
     )
     assert not kept
-
-
-def test_contradiction_is_dropped() -> None:
-    kept = validate(
-        [
-            sentence(
-                "The kubelet must match the API server version.",
-                "may be up to three minor versions older",
-            )
-        ],
-        RETRIEVED,
-        contradict_all,
-        0.5,
-    )
-    assert not kept
-
-
-def test_neutral_kept_only_when_words_come_from_the_quote() -> None:
-    close = sentence(
-        "The kubelet may be three minor versions older.",
-        "kubelet may be up to three minor versions older",
-    )
-    far = sentence(
-        "Upgrading the kubelet first avoids downtime for workloads.",
-        "kubelet may be up to three minor versions older",
-    )
-    kept = validate([close, far], RETRIEVED, neutral_all, 0.5)
-    assert [k.text for k in kept] == [close.text]
 
 
 def test_citation_to_unretrieved_chunk_is_dropped() -> None:
@@ -121,8 +75,6 @@ def test_citation_to_unretrieved_chunk_is_dropped() -> None:
             )
         ],
         RETRIEVED,
-        entail_all,
-        0.5,
     )
     assert not kept
 
@@ -158,7 +110,7 @@ def test_feature_state_line_supports_claim_about_page_subject() -> None:
         "FEATURE STATE: Kubernetes v1.30 [beta]",
         FS_CHUNK.chunk_id,
     )
-    kept = validate([draft], {FS_CHUNK.chunk_id: FS_CHUNK}, neutral_all, 0.5)
+    kept = validate([draft], {FS_CHUNK.chunk_id: FS_CHUNK})
     assert len(kept) == 1
 
 
@@ -168,7 +120,7 @@ def test_wrong_maturity_is_dropped_even_with_page_context() -> None:
         "FEATURE STATE: Kubernetes v1.30 [beta]",
         FS_CHUNK.chunk_id,
     )
-    assert not validate([draft], {FS_CHUNK.chunk_id: FS_CHUNK}, entail_all, 0.5)
+    assert not validate([draft], {FS_CHUNK.chunk_id: FS_CHUNK})
 
 
 def test_near_verbatim_quote_snaps_to_real_text() -> None:
@@ -176,17 +128,17 @@ def test_near_verbatim_quote_snaps_to_real_text() -> None:
         "The kubelet may be three minor versions older.",
         "kubelet may be up to three minor version older than the kube-apiserver",
     )
-    kept = validate([draft], RETRIEVED, entail_all, 0.5)
+    kept = validate([draft], RETRIEVED)
     assert len(kept) == 1
     assert kept[0].citations[0].quote in CHUNK.text
 
 
-def test_without_nli_the_other_checks_still_apply() -> None:
+def test_good_sentence_kept_and_wrong_number_dropped() -> None:
     good = sentence(
         "The kubelet may be three minor versions older.", "may be up to three minor versions older"
     )
     wrong_number = sentence(
         "The kubelet may be five minor versions older.", "may be up to three minor versions older"
     )
-    kept = validate([good, wrong_number], RETRIEVED, None, 0.5)
+    kept = validate([good, wrong_number], RETRIEVED)
     assert [k.text for k in kept] == [good.text]
