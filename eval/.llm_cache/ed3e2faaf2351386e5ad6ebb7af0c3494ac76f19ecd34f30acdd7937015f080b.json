@@ -1,0 +1,1 @@
+{"answerable":true,"sentences":[{"text":"On 1.27, the back‑off limit is set by default to 6.","citations":[{"chunk_id":"v1.27:concepts/workloads/controllers/job#c15","quote":"The back-off limit is set by default to 6."}]}],"gaps":[],"missing":null}
