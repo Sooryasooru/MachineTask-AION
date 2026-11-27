@@ -1,0 +1,1 @@
+{"answerable":true,"sentences":[{"text":"The maximum value you can assign to your own PriorityClass is 1 billion.","citations":[{"chunk_id":"v1.27:concepts/scheduling-eviction/pod-priority-preemption#c3","quote":"A PriorityClass object can have any 32-bit integer value smaller than or equal to 1 billion."}]}],"gaps":[],"missing":null}
