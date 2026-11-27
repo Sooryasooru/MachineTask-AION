@@ -56,6 +56,10 @@ weren't found. The retry is merged in, never swapped in: what the first attempt 
 stays, and the retry can only add sentences for releases that were missing. No retry if
 the first attempt already took 15 s. Each step's time is in the trace and the log line.
 
+**Stage notes.** If a cited section carries exactly one FEATURE STATE line saying
+alpha, beta or deprecated, and the answer doesn't already say so, code adds that line,
+quoted and cited. Like the completion below, nothing in it is generated.
+
 After validation, if the surviving sentences cite only one release, the pipeline
 looks at the other release's twin of each cited section. If that twin states a
 different `FEATURE STATE`, the line is added as its own sentence, quoted verbatim

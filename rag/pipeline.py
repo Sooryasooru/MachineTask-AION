@@ -51,6 +51,7 @@ MATURITY_QUESTION_RE = re.compile(
     r"\b(feature state|maturity|alpha|beta|stable|ga|generally available|deprecated|still use)\b",
     re.I,
 )
+NOT_GA_STAGES = {"alpha", "beta", "deprecated"}
 _GAP_RE = re.compile(
     r"\b1\.\d+\b.*\b(?:do(?:es)? not|don't|doesn't)\b.*\b(?:cover|mention|document|describe)", re.I
 )
@@ -307,7 +308,8 @@ class Pipeline:
                 ids,
             )
         completed = self.complete_versions(question, kept)
-        trace["completed"] = [c.text for c in completed]
+        notes = stage_notes(kept + completed)
+        trace["completed"] = [c.text for c in completed + notes]
         gaps = allowed_gaps(draft.gaps, self.retriever.versions)
         # A release covered by the retry or by completion no longer "doesn't cover this".
         covered = kept_releases(completed)
@@ -315,7 +317,7 @@ class Pipeline:
             covered |= kept_releases(kept) - first_releases
         if covered:
             gaps = [g for g in gaps if not any(v in g for v in covered)]
-        answer, citations = assemble(kept + completed, gaps)
+        answer, citations = assemble(kept + completed + notes, gaps)
         return done(answer, False, citations, ids)
 
 
@@ -376,6 +378,39 @@ def feedback(verdicts: list[dict[str, object]]) -> str:
             lost
         )
     return note
+
+
+def stage_notes(sentences: list[VerifiedSentence]) -> list[VerifiedSentence]:
+    """Say so when a cited feature is not generally available yet.
+
+    Answers about a feature often explain what it does but not that it is alpha or
+    beta, which is the first thing someone deciding whether to use it needs to know.
+    When a cited section carries exactly one FEATURE STATE line (so the line is about
+    that section's feature), its stage is alpha, beta or deprecated, and the answer
+    doesn't already name that stage, code adds the line, quoted verbatim and cited.
+    """
+    said = stages_in(" ".join(s.text for s in sentences))
+    notes: list[VerifiedSentence] = []
+    seen: set[str] = set()
+    for sentence in sentences:
+        for cite in sentence.citations:
+            chunk = cite.chunk
+            matches = list(FEATURE_STATE_RE.finditer(chunk.text))
+            if len(matches) != 1 or chunk.chunk_id in seen:
+                continue
+            stage = stages_in(matches[0].group(0))
+            if not stage & NOT_GA_STAGES or stage <= said:
+                continue
+            seen.add(chunk.chunk_id)
+            said |= stage
+            quote = matches[0].group(0)
+            notes.append(
+                VerifiedSentence(
+                    f"On {chunk.version}, this section is marked {quote}",
+                    (VerifiedCitation(chunk, quote, matches[0].start(), matches[0].end()),),
+                )
+            )
+    return notes
 
 
 def assemble(kept: list[VerifiedSentence], gaps: list[str]) -> tuple[str, list[Citation]]:

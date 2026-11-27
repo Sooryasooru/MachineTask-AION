@@ -7,10 +7,12 @@ from pathlib import Path
 import pytest
 
 from app.schemas import AskResponse
+from rag.chunker import Chunk
 from rag.ingest import build_index
 from rag.llm import LLMError
-from rag.pipeline import Pipeline, load_known_terms
+from rag.pipeline import Pipeline, load_known_terms, stage_notes
 from rag.retriever import Retriever, tokenize
+from rag.validator import VerifiedCitation, VerifiedSentence
 from tests.test_ingest import fake_embed
 
 SKEW = {
@@ -263,3 +265,42 @@ def test_worse_retry_never_removes_what_was_kept(index_dir: Path) -> None:
     resp = pipe.ask_traced("How many minor versions may the kubelet lag?")[0]
     assert calls[0] == 2 and not resp.refused
     assert {c.version for c in resp.citations} == {"1.27"}
+
+
+def _verified(chunk_text: str, version: str = "1.31") -> VerifiedSentence:
+    chunk = Chunk(
+        chunk_id=f"v{version}:tasks/x#c1",
+        doc_id="tasks/x",
+        version=version,
+        title="X",
+        section="X",
+        text=chunk_text,
+    )
+    quote = "Ratcheting accepts updates to invalid objects"
+    start = chunk_text.index(quote)
+    return VerifiedSentence(
+        "Ratcheting accepts updates to invalid objects.",
+        (VerifiedCitation(chunk, quote, start, start + len(quote)),),
+    )
+
+
+def test_stage_note_added_for_a_beta_section() -> None:
+    text = (
+        "FEATURE STATE: Kubernetes v1.30 [beta] (feature gate `CRDValidationRatcheting`)\n\n"
+        "Ratcheting accepts updates to invalid objects as long as the bad parts are unchanged."
+    )
+    notes = stage_notes([_verified(text)])
+    assert len(notes) == 1 and "[beta]" in notes[0].text
+    cite = notes[0].citations[0]
+    assert cite.chunk.text[cite.start : cite.end] == cite.quote
+
+
+def test_no_stage_note_for_stable_or_ambiguous_sections() -> None:
+    body = "Ratcheting accepts updates to invalid objects as long as the bad parts are unchanged."
+    stable = "FEATURE STATE: Kubernetes v1.28 [stable]\n\n" + body
+    two = (
+        "FEATURE STATE: Kubernetes v1.30 [beta]\n\nFEATURE STATE: Kubernetes v1.29 [alpha]\n\n"
+        + body
+    )
+    assert stage_notes([_verified(stable)]) == []
+    assert stage_notes([_verified(two)]) == []
