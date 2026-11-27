@@ -5,6 +5,7 @@
 | File | Size | Role |
 |---|---|---|
 | `eval/questions_holdout.jsonl` | 20 | Headline numbers from now on. Written and frozen (commit `3e8ada7`) before any of the week-two changes. Drafted with AI from the docs, each answer checked by me against the source line. |
+| `eval/questions_holdout2.jsonl` | 13 | Written and frozen after the first holdout run, before the follow-up fix that came from reading holdout answers. Same drafting and checking as the holdout. |
 | `eval/questions_test.jsonl` | 36 | Written before the first run. Seen during development (runs 1 to 3), so no longer unseen. |
 | `eval/questions_dev.jsonl` | 20 | Practice set for tuning: the original 10 dev questions plus the 10 written after run 1 (P-01 to P-10). |
 
