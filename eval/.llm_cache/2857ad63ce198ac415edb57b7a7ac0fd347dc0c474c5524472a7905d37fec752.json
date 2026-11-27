@@ -1,0 +1,1 @@
+{"answerable":true,"sentences":[{"text":"On 1.27, kubelet tracing is in beta.","citations":[{"chunk_id":"v1.27:concepts/cluster-administration/system-traces#c4","quote":"FEATURE STATE: Kubernetes v1.27 [beta]"}]}],"gaps":[],"missing":""}
