@@ -142,3 +142,35 @@ def test_good_sentence_kept_and_wrong_number_dropped() -> None:
     )
     kept = validate([good, wrong_number], RETRIEVED)
     assert [k.text for k in kept] == [good.text]
+
+
+KMS_TEXT = (
+    "You should use KMS v2 if feasible because KMS v1 is deprecated (since Kubernetes v1.28) "
+    "and disabled by default (since Kubernetes v1.29). KMS v2 offers better performance."
+)
+
+
+def test_reordered_quote_keeps_its_longest_verbatim_piece() -> None:
+    quote = (
+        "KMS v1 is deprecated (since Kubernetes v1.28) and disabled by default "
+        "(since Kubernetes v1.29). You should use KMS v2 if feasible"
+    )
+    span = locate_quote(KMS_TEXT, quote)
+    assert span is not None
+    assert KMS_TEXT[span[0] : span[1]].startswith("KMS v1 is deprecated (since Kubernetes v1.28)")
+
+
+def test_quote_spliced_with_ellipsis_keeps_a_real_piece() -> None:
+    quote = "You should use KMS v2 if feasible ... KMS v2 offers better performance."
+    span = locate_quote(KMS_TEXT, quote)
+    assert span is not None and KMS_TEXT[span[0] : span[1]] in KMS_TEXT
+
+
+def test_spliced_quote_with_no_real_piece_is_rejected() -> None:
+    quote = "KMS v1 is fully supported forever ... KMS v3 replaces everything soon enough."
+    assert locate_quote(KMS_TEXT, quote) is None
+
+
+def test_markdown_italics_are_ignored_when_matching() -> None:
+    text = "Components select a leader via _coordinated leader election_ during upgrades."
+    assert locate_quote(text, "select a leader via coordinated leader election") is not None

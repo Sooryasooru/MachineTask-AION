@@ -1,8 +1,12 @@
 """HTTP contract: health check, and /ask never returns anything but the schema."""
 
+import time
+from dataclasses import replace
+
+import pytest
 from fastapi.testclient import TestClient
 
-from app.main import STATE, app
+from app.main import STATE, app, settings
 from app.schemas import AskResponse
 
 FIELDS = {"answer", "refused", "citations", "retrieved_chunk_ids", "latency_ms"}
@@ -14,6 +18,8 @@ class FakePipeline:
     def ask(self, question: object, top_k: object = 5, version: object = None) -> AskResponse:
         if question == "boom":
             raise RuntimeError("unexpected")
+        if question == "slow":
+            time.sleep(1)
         return AskResponse(answer=f"got {question!r}", refused=True)
 
     def ask_traced(
@@ -48,6 +54,14 @@ def test_broken_bodies_still_get_the_schema() -> None:
 def test_unexpected_error_is_not_a_500() -> None:
     resp = client().post("/ask", json={"question": "boom"})
     assert resp.status_code == 200 and resp.json()["refused"] is True
+
+
+def test_slow_answer_becomes_a_refusal(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.main.settings", replace(settings, request_timeout_s=0.2))
+    resp = client().post("/ask", json={"question": "slow"})
+    body = resp.json()
+    assert resp.status_code == 200 and set(body) == FIELDS
+    assert body["refused"] is True and "seconds" in body["answer"]
 
 
 class _Retriever:

@@ -103,6 +103,8 @@ def run_split(
                 "citations_valid": valid,
                 "marker_integrity": integrity,
                 "latency_ms": resp["latency_ms"],
+                "timing_ms": trace.get("timing_ms", {}),
+                "retry_added": trace["retry"].get("added", 0) if "retry" in trace else None,
                 "answer": resp["answer"],
                 "citations": resp["citations"],
             }
@@ -168,6 +170,15 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "wrong_answer_attribution": attribution,
         "p95_latency_ms": round(percentile([r["latency_ms"] for r in rows], 95)),
         "median_latency_ms": round(percentile([r["latency_ms"] for r in rows], 50)),
+        "median_step_ms": {
+            step: round(
+                percentile([r["timing_ms"][step] for r in rows if step in r["timing_ms"]], 50)
+            )
+            for step in ("retrieve", "first_attempt", "retry")
+            if any(step in r["timing_ms"] for r in rows)
+        },
+        "retries": f"{sum(r['retry_added'] is not None for r in rows)} tried, "
+        f"{sum(bool(r['retry_added']) for r in rows)} added sentences",
         "most_confidently_wrong": [
             {
                 k: r[k]
@@ -230,6 +241,8 @@ def main() -> None:
         "citation_validity",
         "retrieval_recall_at_5",
         "p95_latency_ms",
+        "median_step_ms",
+        "retries",
     )
     for split, res in report["splits"].items():
         print(f"\n== {split}")

@@ -45,6 +45,8 @@ class Settings:
     context_per_version: int = int(_env("CONTEXT_PER_VERSION", "3"))
     context_chars: int = int(_env("CONTEXT_CHARS", "1000"))
     max_question_chars: int = int(_env("MAX_QUESTION_CHARS", "1000"))
+    # Longest /ask may take before it answers with a refusal instead of waiting.
+    request_timeout_s: float = float(_env("REQUEST_TIMEOUT_S", "30"))
 
 
 settings = Settings()

@@ -222,3 +222,44 @@ def test_one_sided_answer_gets_other_release_feature_state(tmp_path: Path) -> No
     assert "[stable]" in resp.answer
     for cite in resp.citations:
         assert f"[{cite.chunk_id}]" in resp.answer
+
+
+def make_sequence(index_dir: Path, replies: list[str]) -> tuple[Pipeline, list[int]]:
+    """A pipeline whose fake model gives a different reply on each call."""
+    retriever = Retriever(index_dir, lambda q: fake_embed([q])[0], rerank)
+    calls = [0]
+
+    def llm(_: list[dict[str, str]]) -> str:
+        calls[0] += 1
+        return replies[min(calls[0], len(replies)) - 1]
+
+    return Pipeline(retriever, llm, load_known_terms(index_dir)), calls
+
+
+def one_sided_reply(bad_1_31_quote: bool) -> str:
+    reply = json.loads(conflict_reply())
+    if bad_1_31_quote:
+        reply["sentences"][1]["citations"][0]["quote"] = "kubelet may lag by eleven versions"
+    return json.dumps(reply)
+
+
+def test_retry_adds_the_missing_release_and_keeps_the_rest(index_dir: Path) -> None:
+    pipe, calls = make_sequence(index_dir, [one_sided_reply(True), one_sided_reply(False)])
+    resp, trace = pipe.ask_traced("How many minor versions may the kubelet lag?")
+    assert calls[0] == 2 and trace["retry"]["added"] == 1
+    assert {c.version for c in resp.citations} == {"1.27", "1.31"}
+
+
+def test_no_retry_when_nothing_was_lost(index_dir: Path) -> None:
+    pipe, calls = make_sequence(index_dir, [conflict_reply()])
+    _, trace = pipe.ask_traced("How many minor versions may the kubelet lag?")
+    assert calls[0] == 1 and "retry" not in trace
+    assert set(trace["timing_ms"]) >= {"retrieve", "first_attempt", "total"}
+
+
+def test_worse_retry_never_removes_what_was_kept(index_dir: Path) -> None:
+    unanswerable = json.dumps({"answerable": False, "sentences": [], "missing": "no idea"})
+    pipe, calls = make_sequence(index_dir, [one_sided_reply(True), unanswerable])
+    resp = pipe.ask_traced("How many minor versions may the kubelet lag?")[0]
+    assert calls[0] == 2 and not resp.refused
+    assert {c.version for c in resp.citations} == {"1.27"}

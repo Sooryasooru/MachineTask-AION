@@ -25,8 +25,10 @@ from rag.generator import DraftSentence
 
 MIN_QUOTE_WORDS = 3
 ALIGN_MIN_RATIO = 0.9  # how close a near-verbatim quote must be to snap to the real text
+SEGMENT_MIN_WORDS = 6  # shortest piece of a spliced quote that can stand on its own
+_SEGMENT_SPLIT_RE = re.compile(r"\s*(?:\.\.\.|…)\s*|(?<=[.!?])\s+")
 CONTEXT_WINDOW = 500  # characters kept either side of the quote
-_SKIP_CHARS = {"`", "*"}
+_SKIP_CHARS = {"`", "*", "_"}  # markdown code, bold and italic marks
 _TRANSLATE = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-"})
 _VERSION_PREFIX_RE = re.compile(r"^(on|in|for)\s+(kubernetes\s+)?v?1\.\d+\s*,?\s*", re.I)
 _VERSION_WORD_RE = re.compile(r"^v?1\.\d+$")
@@ -128,15 +130,36 @@ def _aligned_span(chunk_text: str, quote: str) -> tuple[int, int] | None:
     return best_start, best_end
 
 
+def _segment_span(chunk_text: str, quote: str) -> tuple[int, int] | None:
+    """Longest verbatim piece of a spliced quote.
+
+    The model sometimes joins two passages with "..." or swaps the order of two
+    sentences. Each piece is then still a real quote, so the longest piece that is
+    found verbatim (and long enough to mean something) is kept. The returned span is
+    the chunk's own text, and the sentence still has to pass the number and maturity
+    checks against it.
+    """
+    pieces = [p for p in _SEGMENT_SPLIT_RE.split(quote) if len(p.split()) >= SEGMENT_MIN_WORDS]
+    if not pieces or pieces == [quote.strip()]:
+        return None
+    found = [span for p in pieces if (span := _exact_span(chunk_text, p))]
+    return max(found, key=lambda sp: sp[1] - sp[0]) if found else None
+
+
 def locate_quote(chunk_text: str, quote: str) -> tuple[int, int] | None:
     """Find the quote in the chunk; return the (start, end) span in the original text.
 
     Exact match first, then whitespace/markdown-insensitive, then near-verbatim
-    alignment. Whatever matches, the caller gets a span of the chunk's own text.
+    alignment, then the longest verbatim piece of a spliced quote. Whatever matches,
+    the caller gets a span of the chunk's own text.
     """
     if len(quote.split()) < MIN_QUOTE_WORDS:
         return None
-    return _exact_span(chunk_text, quote) or _aligned_span(chunk_text, quote)
+    return (
+        _exact_span(chunk_text, quote)
+        or _aligned_span(chunk_text, quote)
+        or _segment_span(chunk_text, quote)
+    )
 
 
 def numbers_in(text: str) -> set[str]:

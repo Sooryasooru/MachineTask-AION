@@ -36,17 +36,25 @@ For each proposed sentence:
 
 - **Citation check.** The chunk id must be one that was in context, and the quote
   must occur in that chunk. Matching first ignores whitespace, curly quotes and
-  markdown backticks or asterisks. If that fails, a near-verbatim quote (a dropped
-  word, two lines joined) is aligned to the closest real span, but only when it is at
-  least 90% similar and states the same numbers and maturity words. Either way, the
-  quote that's returned is cut from the chunk's own text, so it's always an exact
-  substring.
+  markdown backticks, asterisks and underscores. If that fails, a near-verbatim quote
+  (a dropped word, two lines joined) is aligned to the closest real span, but only
+  when it is at least 90% similar and states the same numbers and maturity words. If
+  the model spliced two passages with "..." or swapped two sentences, the longest
+  piece found word for word (6+ words) is kept. Either way, the quote that's returned
+  is cut from the chunk's own text, so it's always an exact substring.
 - **Numbers and maturity.** Every number and every maturity word (alpha, beta,
   stable, deprecated, GA) in the sentence must appear in the cited text. These are
   exactly what differs between releases.
 - **No NLI model.** An NLI support check was tried and removed: the ablation showed it
   refused correct answers without stopping any wrong ones (see
   [evaluation.md](evaluation.md)).
+
+**One retry.** If checking dropped every sentence about a release the model did write
+about, or the model said "not answerable" while some excerpts had been trimmed, the
+pipeline asks once more with the excerpts untrimmed and a note listing the quotes that
+weren't found. The retry is merged in, never swapped in: what the first attempt kept
+stays, and the retry can only add sentences for releases that were missing. No retry if
+the first attempt already took 15 s. Each step's time is in the trace and the log line.
 
 After validation, if the surviving sentences cite only one release, the pipeline
 looks at the other release's twin of each cited section. If that twin states a
