@@ -1,6 +1,6 @@
 """Deterministic scoring rules used by the evaluation."""
 
-from eval.run_eval import answer_text, citation_checks, score
+from eval.run_eval import answer_text, calibration, citation_checks, score
 
 CONFLICT = {"type": "version_conflict", "must_include": ["1.27", "1.31", "two", "three"]}
 CHUNKS = {
@@ -45,3 +45,13 @@ def test_citation_checks() -> None:
     bad = resp("A [v1.27:d#c1] [v1.31:d#c9].", cites=[cite("v1.27:d#c1", "four minor versions")])
     valid, integrity = citation_checks(bad, CHUNKS)
     assert valid == [False] and not integrity
+
+
+def test_calibration_splits_answered_questions_into_thirds() -> None:
+    rows = [
+        {"refused": False, "confidence": c, "correct": c > 0.5}
+        for c in (0.1, 0.2, 0.3, 0.7, 0.8, 0.9)
+    ] + [{"refused": True, "confidence": 0.0, "correct": True}]
+    thirds = calibration({"test": {"rows": rows}})["thirds"]
+    assert [t["answered"] for t in thirds] == [2, 2, 2]
+    assert [t["accuracy"] for t in thirds] == [0.0, 0.5, 1.0]

@@ -36,7 +36,7 @@ from rag.pipeline import Pipeline, load_default_pipeline
 
 ROOT = Path(__file__).resolve().parent.parent
 EVAL_DIR = ROOT / "eval"
-SPLITS = ("test", "dev", "holdout", "holdout2", "holdout3")
+SPLITS = ("test", "dev", "postfail", "holdout", "holdout2", "holdout3")
 SHOULD_REFUSE = {"unanswerable", "false_premise"}
 MARKER_RE = re.compile(r"\[[^\]]*#c\d+\]")
 
@@ -190,6 +190,32 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def calibration(splits: dict[str, Any]) -> dict[str, Any]:
+    """Does a higher confidence score mean a right answer more often?
+
+    Confidence is the top reranker score. All answered questions from every set are
+    pooled, sorted by it and cut into thirds; each third reports how many were correct.
+    """
+    answered = sorted(
+        (r for res in splits.values() for r in res["rows"] if not r["refused"]),
+        key=lambda r: r["confidence"],
+    )
+    n = len(answered)
+    thirds = (answered[: n // 3], answered[n // 3 : 2 * n // 3], answered[2 * n // 3 :])
+    return {
+        "signal": "top reranker score of the answered question",
+        "thirds": [
+            {
+                "confidence": label,
+                "score_range": [part[0]["confidence"], part[-1]["confidence"]] if part else [],
+                "answered": len(part),
+                "accuracy": rate([r["correct"] for r in part]),
+            }
+            for label, part in zip(("lowest", "middle", "highest"), thirds, strict=True)
+        ],
+    }
+
+
 def machine() -> dict[str, Any]:
     """What the numbers were measured on."""
     return {
@@ -220,6 +246,7 @@ def main() -> None:
             continue
         print(f"\n== {split} ({len(questions)} questions)")
         report["splits"][split] = run_split(pipeline, questions, chunks, split)
+    report["calibration"] = calibration(report["splits"])
     report["runtime_s"] = round(time.time() - started)
     live, hits = llm.STATS["live_calls"], llm.STATS["cache_hits"]
     report["llm_replies"] = {
@@ -249,6 +276,11 @@ def main() -> None:
         for k in keys:
             print(f"  {k:<30} {res.get(k)}")
         print("  most confidently wrong:", [r["qid"] for r in res["most_confidently_wrong"]])
+    print("\n== calibration (all answered questions, by top reranker score)")
+    for third in report["calibration"]["thirds"]:
+        print(
+            f"  {third['confidence']:<8} answered={third['answered']} accuracy={third['accuracy']}"
+        )
     print(f"\nSaved {out}")
 
 
