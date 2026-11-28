@@ -17,26 +17,35 @@ manual. Ask a question, and the librarian looks it up in both editions, opens th
 matching pages side by side, and answers only with sentences it can point to, word
 for word. If it can't find support, it says so.
 
-**How well it works**, measured on 36 questions I wrote and checked by hand:
+**How well it works.** The headline is the question set the system had never seen
+when its last change was made:
 
-| | Result |
+| Unseen questions (holdout2, 13) | Result |
 |---|---|
-| Correct answers | **86%** (31 of 36) |
-| Questions it should refuse, refused | **100%** (11 of 11) |
+| Correct answers | **84.6%** (11 of 13) |
+| Questions it should refuse, refused | **100%** (3 of 3) |
+| Version questions with both releases named | **3 of 3** |
 | Quotes that match the source exactly | **100%** |
-| Questions where the releases disagree, both named | **8 of 9** |
-| Good questions wrongly refused | 8% |
+| Good questions wrongly refused | **0%** |
 
-**How it got there.** Three measured rounds, each one fixing what the previous
-round's mistakes showed:
+On every set, including the 36 test questions from week one (now **94.4%**, 9 of 9
+version questions), nothing that should be refused was answered, and no good
+question was refused.
+Where it still falls short: some answers are correct but leave out a detail, and
+one (G-05) says more than its quote supports. Both are explained below.
+
+**How it got there.** Week one built and measured it in three runs. Week two, after
+a first review, removed what didn't earn its place and fixed what the misses showed,
+measuring before and after on questions frozen first:
 
 ```mermaid
 flowchart LR
-    R1["Run 1<br/>64% correct<br/>3 of 9 version questions"] -->|"show both releases<br/>side by side"| R2["Run 2<br/>75% correct<br/>7 of 9 version questions"]
-    R2 -->|"smarter checking<br/>after an outside review"| R3["Run 3<br/>86% correct<br/>8 of 9 version questions"]
+    W1["Week one<br/>test 64% → 75% → 86%"] --> C["Clean up<br/>514 lines removed<br/>same scores"]
+    C --> H1["Freeze holdout (20)<br/>70%"]
+    H1 --> F1["Retry + quote fixes<br/>holdout 80%, test 94%"]
+    F1 --> H2["Freeze holdout2 (13)<br/>69%"]
+    H2 --> F2["Stage notes<br/>holdout2 85%"]
 ```
-
-Every question that should have been refused was refused in all three runs.
 
 ## How an answer is made
 
@@ -50,9 +59,12 @@ flowchart TD
     W -->|yes| T["Pair each passage with its twin<br/>from the other release"]
     T --> D["The AI drafts sentences,<br/>each with a quote from a passage"]
     D --> V["Code checks every sentence: is the quote really there,<br/>and do its numbers and maturity words match?"]
-    V --> K{"Did any sentence survive?"}
+    V --> R{"Did checking drop a whole release,<br/>or was a passage cut short?"}
+    R -->|yes| Y["Ask once more with full passages,<br/>adding only what was missing"]
+    R -->|no| K{"Did any sentence survive?"}
+    Y --> K
     K -->|no| X3["Refuse, and explain what's missing"]
-    K -->|yes| F["If only one release made it, add the other<br/>release's feature state, quoted from the docs"]
+    K -->|yes| F["Add, quoted from the docs: the other release's feature state<br/>if it differs, and alpha/beta status if the answer left it out"]
     F --> A["Answer, with a 1.27 or 1.31 label on every claim"]
 ```
 
@@ -94,10 +106,10 @@ Add `"version": "1.27"` or `"1.31"` to search only one release.
 
 | Command | What it does |
 |---|---|
-| `make eval` | Runs my question set and writes `eval_report.json` |
+| `make eval` | Runs all four question sets and writes `eval_report.json` |
 | `make recall` | Measures search on its own, for each search mode |
 | `make smoke` | Runs the brief's edge cases against a running server |
-| `make check` | Lint, type checks and tests |
+| `make check` | Lint, type checks and 80 tests (also runs on GitHub on every push) |
 
 All settings are environment variables (see `.env.example`), and dependencies are
 pinned to the versions the numbers here were measured with.
@@ -142,8 +154,25 @@ can't be invented.
 cited passage, and every number and maturity word it states is there too. If the
 AI's quote is nearly but not exactly word for word (a dropped word, two lines
 joined), it's aligned to the closest real text, but only when at least 90% similar
-and stating the same numbers and stages. The quote you see is always the
-documentation's own text.
+and stating the same numbers and stages. If it glued two passages together with
+"..." or swapped two sentences, the longest piece that is found word for word is
+kept. The quote you see is always the documentation's own text.
+
+**A second chance, without losing anything.** Sometimes checking throws away a
+right answer: the passage the AI saw was cut at 1,000 characters (T-28's answer sat
+just past that), or a quote was copied loosely. When checking drops every sentence
+about a release, or the AI says "not answerable" about a passage that was cut short,
+it asks once more, with the full passages and a list of the quotes that didn't match.
+The second answer is merged in, never swapped in: everything the first one kept stays.
+
+**Saying when a feature isn't finished.** Answers about a feature often explained
+what it does but not that it's alpha or beta, which is the first thing you need to
+know before relying on it. If a cited section is marked alpha, beta or deprecated and
+the answer doesn't say so, code adds that line, quoted and cited.
+
+**Never hanging.** `/ask` gives up after 30 seconds (`REQUEST_TIMEOUT_S`) and returns
+a normal refusal, so a slow or rate-limited model can't hold a request open. Each
+request logs how long search, the AI and the retry took.
 
 **When it refuses.** Three checks:
 - *Unknown settings.* A `--flag` or feature gate that appears in neither release is
@@ -170,72 +199,74 @@ More detail: [architecture](docs/architecture.md), [evaluation method](docs/eval
 Measured on my own laptop: HP Pavilion 14, 12th-gen Intel, 8 GB RAM, no GPU. The AI
 model was `gpt-oss-120b` on Groq's free tier. Reproduce with `make ingest && make eval`.
 
-| | Test (36) | Practice set (10) | Written after run 1 (10) |
-|---|---|---|---|
-| Correct answers | **86.1%** | 80.0% | 100% |
-| Unanswerable or trick questions refused | **100%** (11 of 11) | 100% (3 of 3) | 100% (3 of 3) |
-| Good questions wrongly refused | **8%** | 14% | 0% |
-| Hallucination rate (all incomplete; none answered what it should refuse) | 8.3% | 10.0% | 0% |
-| Version questions with both releases cited | **8 of 9** | 2 of 2 | 6 of 6 |
-| Quotes that exactly match the source | **100%** | 100% | 100% |
-| Right page found in the top 5 (search only) | **100%** | 100% | 100% |
+| | Holdout2 (13) | Holdout (20) | Test (36) | Practice (20) |
+|---|---|---|---|---|
+| Still unseen? | **Yes** | Until the stage-note fix | No, tuned on | No, tuned on |
+| Correct answers | **84.6%** | 95.0% | 94.4% | 95.0% |
+| Unanswerable or trick questions refused | **3 of 3** | 5 of 5 | 11 of 11 | 5 of 5 |
+| Good questions wrongly refused | **0%** | 0% | 0% | 0% |
+| Hallucination rate (all incomplete; none answered what it should refuse) | 15.4% | 5.0% | 5.6% | 5.0% |
+| Version questions with both releases cited | **3 of 3** | 5 of 5 | 9 of 9 | 8 of 8 |
+| Quotes that exactly match the source | **100%** | 100% | 100% | 100% |
+| Right page found in the top 5 (search only) | **100%** | 100% | 100% | 100% |
+
+**The question sets.** Test (36) was written before the first run. Practice (20) is
+the week-one practice set plus 10 questions written after run 1. In week two I
+froze two holdout sets before changing code: holdout (20) before the retry and quote
+fixes, holdout2 (13) before the stage-note fix. Claude drafted both from the docs; I
+checked every expected answer against its source line before freezing them (commits
+`3e8ada7` and `ec41e6e`). See
+[docs/evaluation.md](docs/evaluation.md).
 
 **How answers are scored.** Automatically, with no AI judge. A question that should be
 refused counts as correct only if it's refused with no citations. An answerable one
 counts only if the answer contains the expected facts, and for version questions,
-names and cites both releases. Details in [docs/evaluation.md](docs/evaluation.md).
+names and cites both releases.
 
-**Speed.** Answers usually take 2–5 seconds. The slowest 5% took 17 seconds, which
-includes waiting on the free tier's rate limit (`eval/eval_report_run2_live.json`).
+**Speed.** With the AI's replies replayed, a question takes about 1.5 seconds, nearly
+all of it search and reranking on the CPU. With live AI calls, answers usually take
+2–5 seconds; the slowest 5% took 11 seconds in the live week-two run, from the extra
+retry call and free-tier rate limits. `/ask` never waits more than 30 seconds.
 
-**Getting my exact numbers.** The AI's replies from my run are saved in
+**Getting my exact numbers.** The AI's replies from my runs are saved in
 `eval/.llm_cache/`, so `make eval` replays them and reproduces every number above
 exactly, with no API key needed. Search, checking and scoring still run live on your
-machine; only the timing differs, because no AI calls are made. Delete that folder to
-run fresh with your own key, and expect small differences, because the AI model
-isn't perfectly deterministic.
+machine. Delete that folder to run fresh with your own key, and expect small
+differences, because the AI model isn't perfectly deterministic.
 
-### Being upfront about the three runs
+### Being upfront about every run
 
-| Test set | Run 1 | Run 2 | Run 3 |
+| | Holdout2 | Holdout | Test |
 |---|---|---|---|
-| Correct answers | 63.9% | 75.0% | **86.1%** |
-| Version questions | 3/9 | 7/9 | **8/9** |
-| Good questions wrongly refused | 28% | 24% | **8%** |
-| Unanswerable refused | 11/11 | 11/11 | 11/11 |
+| Week one, run 1 / 2 / 3 | – | – | 63.9% / 75.0% / 86.1% |
+| Week two, after clean-up (same behaviour) | – | 70.0% | 86.1% |
+| After retry and quote fixes | 69.2% | 80.0% | 94.4% |
+| After stage notes | **84.6%** | 95.0% | 94.4% |
 
-- **Run 1 to 2:** design changes after reading the first run's traces (twin passages
-  from both releases, a better support check). I wrote the 10 "after run 1" questions
-  *before* run 2, to check the fixes held up; they scored 80% then.
-- **Run 2 to 3:** changes after an outside review of run 2 (quote alignment, adding the
-  other release's feature state in code, a narrower unknown-setting check, and
-  switching off the NLI check, below). Run 3 uses **exactly the same AI replies as run
-  2**; only the checking afterwards changed. Since these changes came after seeing
-  failures on every set, none of my sets is unseen any more. Your held-out questions
-  are the real test.
+- **Week one:** run 1 to 2 changed the design after reading traces (twin passages
+  from both releases); run 2 to 3 changed only the checking, after an outside review.
+- **Clean-up** removed the NLI checker, a benchmark script and unused report fields.
+  Test stayed at exactly 86.1%, which shows behaviour didn't change.
+- **Retry and quote fixes** came from test and practice failures only (T-07, T-23,
+  T-28, D-06). I didn't read holdout answers until after this run.
+- **Stage notes** came from reading the holdout misses (H-07 to H-09). That's why I
+  froze holdout2 first: its 69.2% → 84.6% is the honest measure of that fix.
+- **Nothing that passed before failed after.** Every question correct before each
+  change was still correct after it.
 
-Runs 1 and 2 are kept in `eval/eval_report_v1_baseline.json` and
-`eval/eval_report_run2_live.json`.
+Earlier reports are kept in `eval/`: `eval_report_v1_baseline.json`,
+`eval_report_run2_live.json`, `eval_report_week2_baseline.json`,
+`eval_report_week2_after.json`, `eval_report_holdout2_before.json` and
+`eval_report_week2_final.json`.
 
-### The NLI experiment, and how I decided
+### The NLI experiment, and why it's gone
 
-The NLI model was a second checker on every sentence. I replayed the same AI replies
-with it on and off:
-
-| Test set | NLI on | NLI off |
-|---|---|---|
-| Correct answers | 77.8% | 86.1% |
-| Good questions wrongly refused | 24% | 8% |
-| Answered but incomplete | 2 | 3 |
-| Answered what should be refused | 0 | 0 |
-
-Before measuring, my rule was to keep NLI only if it stopped wrong answers getting
-through. Taken literally, it did: one more incomplete answer appears without it
-(T-35). I then read that answer. It's correct (create an `EncryptionConfiguration`,
-restart the API server) and fully quoted; it only leaves out the flag name the
-scoring looks for. So NLI's only real effect was refusing good answers, and it's now
-removed from the code. I'm saying this plainly because
-the final call was made after reading that answer, not by the rule alone.
+In week one the NLI model was a second checker on every sentence. Replaying the same
+AI replies with it on and off, it took test accuracy from 86.1% down to 77.8% and
+refused 24% of good questions instead of 8%, without stopping a single wrong
+answer. I switched it off then and removed it from the code in week two; the NLI-on
+report is kept as `eval/eval_report_run3_nli_on.json`. G-05 below is the kind of
+miss it was meant to catch, so a better support check is on the next-steps list.
 
 **Search on its own** (`make recall`): keyword search alone and semantic search alone
 each found 96% of the right pages; combined, 100%. The reranker added no recall, but
@@ -245,32 +276,38 @@ switched to a smaller one (1.2 seconds).
 
 ### The three answers it gets most confidently wrong
 
-1. **T-07, KMS v1.** It answers for 1.27 (use KMS v2 for better performance) but never
-   says that 1.31 deprecated KMS v1, the one fact that matters. The 1.31 sentence
-   failed its check, and the twin section had no different feature state for code to add.
+1. **G-05, selectable fields for custom resources (unseen).** The 1.31 part is right.
+   But the 1.27 sentence mentions `selectableFields` and "enabled by default in 1.31",
+   and the 1.27 passage it cites says neither. The quote is real, so the checker let it
+   through; the sentence says more than its quote. It's also missing "beta". This is the
+   system's main weakness: quotes are verified, the claim around them isn't fully.
 2. **T-35, encryption at rest.** Correct and quoted, but it doesn't name
    `--encryption-provider-config`, which the expected answer requires.
 3. **T-36, pinning a Pod to a node.** Right in substance (label the node, use
-   `nodeSelector`), but it cites the DaemonSet page and doesn't say `kubectl label`. I
-   left my expected answer as it was rather than change it after seeing the result.
+   `nodeSelector`), but it doesn't say `kubectl label`. I left my expected answer as it
+   was rather than change it after seeing the result.
 
-Search found the right page every time, so every remaining mistake comes from the
-answer step, not from search.
+The other misses are the same kind as 2 and 3: correct but incomplete. D-10 skips
+`configMapKeyRef`, H-15 gives the 32-domain limit but not the 2,048-character one, and
+G-10 says "1 billion" where the scoring looks for `1000000000`. Search found the right
+page every time, so every remaining mistake comes from the answer step.
 
 ## Features
 
 Everything the brief asks for, plus:
 - Combined keyword and semantic search, measured mode by mode
-- A reranker, with an honest note that it didn't add recall
+- A reranker, kept for its "is this answerable at all?" score even though it adds no recall
 - A `version` option to search only one release
-- A second question set written after seeing my own failures, reported separately
+- Two frozen holdout sets, with before-and-after numbers for each change
 - A web page where every citation opens its source passage
+- GitHub Actions running lint, type checks and tests on every push
 
 **Reliability.** `/readyz` reports whether the index and models actually loaded, and
 the Docker health check uses it. If the main AI model keeps failing, the service
 retries once with a smaller fallback model (`LLM_FALLBACK_MODEL`; switched off during
-`make eval`, so the numbers come from one model). Each request writes one log line
-with its outcome and timing.
+`make eval`, so the numbers come from one model). `/ask` returns a refusal after 30
+seconds instead of hanging. Each request writes one log line with its outcome and the
+time each step took.
 
 Every request gets a proper response, never a crash: an empty question, 4,000
 characters, another language, broken JSON or the AI being unavailable all return the
@@ -278,32 +315,33 @@ normal format. Rebuilding the index gives identical files every time.
 
 ## Known issues
 
-- **One-sided version answers can still happen.** T-07 covers only 1.27. Code fills in
-  the other release only when its twin section states a different feature state.
+- **A sentence can say more than its quote.** The checker confirms the quote is real
+  and that numbers and maturity words match, but not every other detail in the
+  sentence (G-05).
+- **Some answers are correct but incomplete.** They leave out a flag, command or
+  second limit the question needed (T-35, T-36, D-10, H-15).
 - **Absence statements have no citation.** A line like "The 1.27 documentation
   excerpts do not cover this" carries no `[chunk_id]`, because there's no passage to
   quote for something missing. Only that fixed form is allowed through without one.
-- **My version questions lean on feature-state changes.** 8 of 9 are maturity
-  differences found by comparing `FEATURE STATE` lines, and T-01 is the brief's own
-  example. Questions about changed defaults, removed flags and renamed fields would
-  test more.
 - **Scoring is keyword-based.** It's reproducible, but stricter than a human reader
-  (T-35, T-36).
+  (G-10's "1 billion").
 - **Example files aren't included.** Some task pages point to YAML files I didn't
   ingest.
 - **Free-tier limits.** Groq allows only about one full live run per day, which is
   one reason the recorded replies are included.
 
-## Next steps I didn't get to
+## Next steps
 
-These came out of reviewing run 2, and need fresh AI calls, so they wait on the free
-tier's daily quota:
-- Show the AI whole passages instead of the first 1,000 characters (T-28's answer sits
-  past that cut).
-- When every sentence fails its check on a strongly matched question, ask the AI once
-  more, telling it which quotes didn't match.
-- Add version questions found by reading: changed defaults, removed flags, renamed fields.
-- Commit a fresh live run, so speed and accuracy come from the same report.
+Both main issues need a prompt change, which changes every AI reply. So the next
+step is a process, not a patch:
+1. Change the instruction: name the exact flag, command or limit, and make each
+   sentence say only what its quote says.
+2. Re-run every question live and compare question by question.
+3. Keep the change only if nothing that passes today fails.
+4. Confirm on a fresh holdout written before the change.
+
+With a paid key that's a day's work; on the free tier it's about two days of quota,
+and it would use up holdout2, so I left it here with the numbers honest.
 
 ## What I left out
 
