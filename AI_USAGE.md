@@ -56,3 +56,14 @@ requirements, the design decisions and the testing; Claude wrote most of the cod
   the request time limit and CI, and found the root causes in the traces (a passage
   cut at 1,000 characters, loosely copied quotes, italics in the docs). I applied each
   change, ran `make check` and every eval on my machine, and read the results.
+
+### After the brief re-check (end of week two)
+
+- **I asked for a re-check against the brief,** which found two bonuses I had removed
+  in the clean-up (the post-failure slice and confidence calibration); both are back.
+- **Holdout3:** I picked and checked every fact against both releases; Claude found
+  candidate pages and drafted most of the wording.
+- **Real-user sets:** I asked whether my questions were too easy for search; Claude
+  wrote the 30 user-style rewrites, which I reviewed. The rewrite step was built on the
+  first 15 and measured on the second 15, frozen before it was written.
+

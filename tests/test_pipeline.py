@@ -304,3 +304,15 @@ def test_no_stage_note_for_stable_or_ambiguous_sections() -> None:
     )
     assert stage_notes([_verified(stable)]) == []
     assert stage_notes([_verified(two)]) == []
+
+
+def test_gap_lines_are_fixed_code_text() -> None:
+    from rag.pipeline import allowed_gaps  # pylint: disable=import-outside-toplevel
+
+    gaps = [
+        "The 1.27 documentation excerpts do not cover this.",
+        "1.31 does not mention it, but you should use v2 instead.",
+    ]
+    assert allowed_gaps(gaps, ["1.27", "1.31"]) == [
+        "Search found no passage about this in the 1.27 documentation."
+    ]

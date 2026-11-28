@@ -62,13 +62,19 @@ _GAP_EXTRA_RE = re.compile(r"\b(?:but|should|instead|use|recommend\w*|however)\b
 
 
 def allowed_gaps(gaps: list[str], versions: list[str]) -> list[str]:
-    """Gaps carry no citation, so only plain "release X doesn't cover this" lines pass."""
-    kept = []
+    """Which releases had nothing to say, as fixed sentences written by code.
+
+    An absence has no passage to cite, so these are the only sentences without a
+    [chunk_id] marker. The model only signals *which* release had nothing (a plain
+    "release X doesn't cover this" line); the wording shown is always this one, so no
+    uncited model text reaches the answer.
+    """
+    missing: list[str] = []
     for gap in gaps[:2]:
         plain = _GAP_RE.search(gap) and not _GAP_EXTRA_RE.search(gap)
-        if plain and any(v in gap for v in versions) and len(gap) <= 160:
-            kept.append(gap)
-    return kept
+        if plain and len(gap) <= 160:
+            missing += [v for v in versions if v in gap and v not in missing]
+    return [f"Search found no passage about this in the {v} documentation." for v in missing]
 
 
 def load_known_terms(index_dir: Path) -> set[str]:

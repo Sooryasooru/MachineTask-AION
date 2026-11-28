@@ -140,7 +140,16 @@ the place they differ.
 
 **Searching.** Each release is searched on its own, so one can't crowd the other
 out of the results. Keyword search catches exact names like `--max-pods`; semantic
-search catches meaning. Combined, they found the right page for every question.
+search catches meaning. Combined, they found the right page for every question I
+wrote, but my questions borrow the docs' own words. Asked the way a user would ("how
+long does kubernetes wait before it force kills my app"), search found the right
+page only 73–93% of the time (see [Real-user wording](#real-user-wording)).
+
+**Rewriting vague questions.** So when search looks weak (best reranker score under
+0.5), a small model (`gpt-oss-20b`) rewrites the question into the docs' terms, the
+search runs again, and the two results are merged per release, best score first.
+Questions that already search well never reach this step. The cost: a rewritten
+search can push a weakly scored original result out of the top 5 (it did once).
 
 **Comparing releases.** This mattered most. Take the kubelet question: 1.27 says it
 may trail the API server by two versions, 1.31 says three. My first run often showed
@@ -176,16 +185,31 @@ the answer doesn't say so, code adds that line, quoted and cited.
 a normal refusal, so a slow or rate-limited model can't hold a request open. Each
 request logs how long search, the AI and the retry took.
 
-**When it refuses.** Three checks:
+**When it refuses.** Three checks, in order:
 - *Unknown settings.* A `--flag` or feature gate that appears in neither release is
   refused straight away. It's checked against every term in the docs, not just what
   search happened to find.
-- *Nothing relevant.* If the best search score is under 0.05, it refuses. I kept this
-  low on purpose: off-topic questions score near 0, but tricky unanswerable ones
-  score almost as high as real ones (0.92 against 0.99). No threshold separates them
-  without refusing good questions, so the next check handles them.
+- *Nothing relevant.* If the best search score (after any rewrite) is under 0.05, it
+  refuses without asking the AI.
 - *Nothing verified.* If no drafted sentence can be backed by a quote, the answer
   becomes a refusal that explains what was missing.
+
+**Why the threshold is 0.05, and why it's low.** I set it on the practice set in week
+one and haven't changed it. Checked afterwards across all 92 questions that reach
+search:
+
+| Threshold | Answerable questions refused by mistake (of 73) | Unanswerable caught (of 19) |
+|---|---|---|
+| 0.05 (used) | **0** | 4 |
+| 0.2 | 0 | 5 |
+| 0.5 | 2 | 7 |
+
+The lowest-scoring answerable question I wrote scored 0.21, but most unanswerable
+ones are on-topic and score 0.6–0.99, as high as real answers. No threshold separates
+them, so this gate only stops clearly off-topic questions, and the other two checks do
+the rest. Keeping it low matters more for vague questions: without the rewrite, 6 of
+30 real-user questions scored under 0.05 and would have been refused before the AI
+saw them. With the rewrite, all 6 scored above it.
 
 **What I count as a hallucination:** any answer that isn't a refusal and is wrong,
 either because it answered something it should have refused, or because it missed a
@@ -270,11 +294,38 @@ answer. I switched it off then and removed it from the code in week two; the NLI
 report is kept as `eval/eval_report_run3_nli_on.json`. G-05 below is the kind of
 miss it was meant to catch, so a better support check is on the next-steps list.
 
-**Search on its own** (`make recall`): keyword search alone and semantic search alone
-each found 96% of the right pages; combined, 100%. The reranker added no recall, but
-it orders the passages the AI sees and provides the score behind the "nothing
-relevant" check. My first reranker took 18.8 seconds per search on this laptop, so I
-switched to a smaller one (1.2 seconds).
+**Search on its own** (`make recall`): on my questions, keyword search alone and
+semantic search alone each found 96% of the right pages; combined, 100%. The
+reranker added nothing there. On real-user wording it did help (below), and its score
+drives the rewrite and the "nothing relevant" check. My first reranker took 18.8
+seconds per search on this laptop, so I switched to a smaller one (1.2 seconds).
+
+### Real-user wording
+
+My questions reuse the docs' vocabulary, which makes search look better than it is.
+So I rewrote 30 answerable questions the way a user would type them, with the same
+answers and source pages: 15 to build the rewrite step (paraphrase), 15 frozen before
+building it (paraphrase2). Right page in the top 5, search only:
+
+| | Original wording | User wording | User wording + rewrite |
+|---|---|---|---|
+| Keyword only | 93% / 100% | 47% / 73% | – |
+| Semantic only | 100% / 93% | 67% / 93% | – |
+| Combined | 100% / 100% | 67% / 87% | – |
+| Combined + reranker | 100% / 100% | 73% / 93% | **73% / 100%** |
+| Under the refusal threshold | 0 / 0 | 3 / 3 | **0 / 0** |
+
+(paraphrase / paraphrase2.) Recall barely moved, but every vague question that would
+have been refused before reaching the AI now gets an answer attempt, which is what
+the rewrite is for. Fifteen questions per set is small: one question is 7 points.
+
+### Is a confident answer more often right?
+
+No. Pooling every answered question and splitting by top reranker score, the lowest
+third was 91.7% correct, the middle 95.8%, the highest 83.3%. The score measures
+whether search found relevant text, which it nearly always does on my questions,
+while the remaining mistakes are answers that leave out a detail. So "most confidently
+wrong" below means "highest score among the wrong answers", not a calibrated signal.
 
 ### The three answers it gets most confidently wrong
 
@@ -301,7 +352,8 @@ page every time, so every remaining mistake comes from the answer step.
 
 Everything the brief asks for, plus:
 - Combined keyword and semantic search, measured mode by mode
-- A reranker, kept for its "is this answerable at all?" score even though it adds no recall
+- A reranker, measured on both doc-style and user-style questions
+- A query rewrite for vague questions, measured on a set frozen before it was built
 - A `version` option to search only one release
 - Two frozen holdout sets, with before-and-after numbers for each change
 - A web page where every citation opens its source passage
@@ -325,9 +377,13 @@ normal format. Rebuilding the index gives identical files every time.
   detail in the sentence (G-05 was caught by the release rule; others might not be).
 - **Some answers are correct but incomplete.** They leave out a flag, command or
   second limit the question needed (T-35, T-36, D-10, H-15).
-- **Absence statements have no citation.** A line like "The 1.27 documentation
-  excerpts do not cover this" carries no `[chunk_id]`, because there's no passage to
-  quote for something missing. Only that fixed form is allowed through without one.
+- **Absence lines have no citation.** "Search found no passage about this in the 1.27
+  documentation." carries no `[chunk_id]`, because there's no passage to quote for
+  something missing. Code writes that sentence; the AI only signals which release had
+  nothing, so no uncited AI text reaches the answer.
+- **Vague wording is harder.** Search finds the right page 73–100% of the time for
+  user-style questions, against 100% for mine. The rewrite stops wrong refusals but
+  can't fix a search that never finds the page.
 - **Scoring is keyword-based.** It's reproducible, but stricter than a human reader
   (G-10's "1 billion").
 - **Example files aren't included.** Some task pages point to YAML files I didn't
