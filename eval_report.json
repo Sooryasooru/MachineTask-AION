@@ -9,20 +9,18 @@
     "device": "cpu",
     "embed_model": "BAAI/bge-small-en-v1.5",
     "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
-    "nli_model": "cross-encoder/nli-deberta-v3-small",
     "llm": "openai/gpt-oss-120b @ https://api.groq.com/openai/v1",
-    "refusal_threshold": 0.05,
-    "nli_enabled": false
+    "refusal_threshold": 0.05
   },
   "splits": {
     "test": {
       "questions": 36,
-      "accuracy": 0.861,
+      "accuracy": 0.944,
       "accuracy_by_type": {
         "factual": {
           "n": 8,
-          "correct": 7,
-          "accuracy": 0.875
+          "correct": 8,
+          "accuracy": 1.0
         },
         "false_premise": {
           "n": 3,
@@ -41,32 +39,38 @@
         },
         "version_conflict": {
           "n": 9,
-          "correct": 8,
-          "accuracy": 0.889
+          "correct": 9,
+          "accuracy": 1.0
         },
         "version_gap": {
           "n": 4,
-          "correct": 3,
-          "accuracy": 0.75
+          "correct": 4,
+          "accuracy": 1.0
         }
       },
       "refusal_rate_on_unanswerable": 1.0,
-      "false_refusal_rate": 0.08,
-      "hallucination_rate": 0.083,
+      "false_refusal_rate": 0.0,
+      "hallucination_rate": 0.056,
       "answered_but_should_refuse_rate": 0.0,
-      "answered_but_incomplete_rate": 0.083,
-      "version_conflict_pass": "8/9",
+      "answered_but_incomplete_rate": 0.056,
+      "version_conflict_pass": "9/9",
       "citation_validity": 1.0,
-      "citations_checked": 44,
+      "citations_checked": 48,
       "marker_integrity": 1.0,
       "retrieval_recall_at_5": 1.0,
       "conflict_both_versions_at_5": 1.0,
       "wrong_answer_attribution": {
         "retrieval": 0,
-        "generation_or_gates": 5
+        "generation_or_gates": 2
       },
-      "p95_latency_ms": 1910,
-      "median_latency_ms": 1103,
+      "p95_latency_ms": 3312,
+      "median_latency_ms": 1589,
+      "median_step_ms": {
+        "retrieve": 1682,
+        "first_attempt": 11,
+        "retry": 0
+      },
+      "retries": "9 tried, 1 added sentences",
       "most_confidently_wrong": [
         {
           "qid": "T-35",
@@ -78,15 +82,6 @@
           "answer": "On 1.27, you enable encryption at rest for Secrets by creating an EncryptionConfiguration that includes a provider such as aescbc and then restarting the kube‑apiserver [v1.27:tasks/administer-cluster/encrypt-data#c1] [v1.27:tasks/administer-cluster/encrypt-data#c17]. On 1.31, you enable encryption at rest for Secrets by adding a non‑identity provider (e.g., aescbc) to the EncryptionConfiguration file and restarting the kube‑apiserver [v1.31:tasks/administer-cluster/encrypt-data#c1] [v1.31:tasks/administer-cluster/encrypt-data#c23]."
         },
         {
-          "qid": "T-07",
-          "type": "version_conflict",
-          "question": "Should I still use KMS v1 for encryption at rest?",
-          "expected": "1.27 documents KMS v1 as beta; 1.31 says KMS v1 is deprecated since v1.28 and disabled by default since v1.29, use KMS v2",
-          "confidence": 0.9996,
-          "refused": false,
-          "answer": "On 1.27, the documentation recommends using KMS v2 for clusters running v1.27 or newer because it offers significantly better performance characteristics than v1 [v1.27:tasks/administer-cluster/kms-provider#c1]."
-        },
-        {
           "qid": "T-36",
           "type": "procedural",
           "question": "How do I make a Pod run on a specific node using labels?",
@@ -94,23 +89,6 @@
           "confidence": 0.9995,
           "refused": false,
           "answer": "Add a label (e.g., `ssd=true`) to the target node and set the Pod’s `nodeSelector` to match that label so the scheduler places the Pod on that node [v1.27:tasks/manage-daemon/pods-some-nodes#c2]."
-        }
-      ],
-      "confidence_buckets": [
-        {
-          "drafted_sentences_kept": "under half kept",
-          "answered": 0,
-          "accuracy": 0.0
-        },
-        {
-          "drafted_sentences_kept": "half or more kept",
-          "answered": 2,
-          "accuracy": 0.5
-        },
-        {
-          "drafted_sentences_kept": "all kept",
-          "answered": 21,
-          "accuracy": 0.905
         }
       ],
       "rows": [
@@ -122,7 +100,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9989,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -130,7 +107,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 938,
+          "latency_ms": 1384,
+          "timing_ms": {
+            "retrieve": 1373,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1384
+          },
+          "retry_added": null,
           "answer": "On 1.27, kubelet may be up to two minor versions older than kube-apiserver [v1.27:releases/version-skew-policy#c2]. On 1.31, kubelet may be up to three minor versions older than kube-apiserver [v1.31:releases/version-skew-policy#c2].",
           "citations": [
             {
@@ -155,7 +139,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9165,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -163,7 +146,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1103,
+          "latency_ms": 1509,
+          "timing_ms": {
+            "retrieve": 1498,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1509
+          },
+          "retry_added": null,
           "answer": "On 1.27, swap memory management is in alpha maturity (FEATURE STATE: Kubernetes v1.22 [alpha]) [v1.27:concepts/architecture/nodes#c24]. On 1.31, swap memory management is in beta maturity (FEATURE STATE: Kubernetes v1.30 [beta] (feature gate `NodeSwap`)) [v1.31:concepts/architecture/nodes#c13].",
           "citations": [
             {
@@ -188,7 +178,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9969,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -196,7 +185,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 961,
+          "latency_ms": 1210,
+          "timing_ms": {
+            "retrieve": 1199,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1210
+          },
+          "retry_added": null,
           "answer": "On 1.27, the schedulingGates feature is in alpha stage [v1.27:concepts/scheduling-eviction/pod-scheduling-readiness#c1]. On 1.31, the schedulingGates feature is stable [v1.31:concepts/scheduling-eviction/pod-scheduling-readiness#c1].",
           "citations": [
             {
@@ -221,7 +217,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9995,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -229,7 +224,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1101,
+          "latency_ms": 1310,
+          "timing_ms": {
+            "retrieve": 1300,
+            "first_attempt": 10,
+            "retry": 0,
+            "total": 1310
+          },
+          "retry_added": null,
           "answer": "On 1.27, user namespaces for Pods are in alpha stage (FEATURE STATE: Kubernetes v1.25 [alpha]) [v1.27:concepts/workloads/pods/user-namespaces#c1]. On 1.31, user namespaces for Pods are in beta stage (FEATURE STATE: Kubernetes v1.30 [beta]) [v1.31:concepts/workloads/pods/user-namespaces#c1].",
           "citations": [
             {
@@ -254,7 +256,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9992,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -262,7 +263,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1048,
+          "latency_ms": 1380,
+          "timing_ms": {
+            "retrieve": 1369,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1380
+          },
+          "retry_added": null,
           "answer": "On 1.27, the gRPC liveness probe feature is in beta [v1.27:tasks/configure-pod-container/configure-liveness-readiness-startup-probes#c9]. On 1.31, the gRPC liveness probe feature is stable [v1.31:tasks/configure-pod-container/configure-liveness-readiness-startup-probes#c9].",
           "citations": [
             {
@@ -287,7 +295,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9996,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -298,7 +305,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 715,
+          "latency_ms": 1370,
+          "timing_ms": {
+            "retrieve": 1368,
+            "first_attempt": 1,
+            "retry": 1,
+            "total": 1370
+          },
+          "retry_added": null,
           "answer": "On 1.27, you can set `.spec.ordinals.start` to configure the start ordinal after enabling the `StatefulSetStartOrdinal` feature gate, and the feature is in beta [v1.27:concepts/workloads/controllers/statefulset#c7]. On 1.31, you can set `.spec.ordinals.start` to configure the start ordinal, and the feature is now stable [v1.31:concepts/workloads/controllers/statefulset#c7]. In both releases, a StatefulSet pod’s ordinal is part of its unique, stable identity that persists across rescheduling [v1.27:concepts/workloads/controllers/statefulset#c6]. In both releases, the default ordinal range starts at 0 and increments up to N‑1 [v1.27:concepts/workloads/controllers/statefulset#c6].",
           "citations": [
             {
@@ -338,24 +352,37 @@
           "type": "version_conflict",
           "question": "Should I still use KMS v1 for encryption at rest?",
           "expected": "1.27 documents KMS v1 as beta; 1.31 says KMS v1 is deprecated since v1.28 and disabled by default since v1.29, use KMS v2",
-          "correct": false,
+          "correct": true,
           "refused": false,
           "confidence": 0.9996,
-          "validator_confidence": 0.5,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
+            true,
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1281,
-          "answer": "On 1.27, the documentation recommends using KMS v2 for clusters running v1.27 or newer because it offers significantly better performance characteristics than v1 [v1.27:tasks/administer-cluster/kms-provider#c1].",
+          "latency_ms": 1913,
+          "timing_ms": {
+            "retrieve": 1671,
+            "first_attempt": 242,
+            "retry": 0,
+            "total": 1913
+          },
+          "retry_added": null,
+          "answer": "On 1.27, the documentation recommends using KMS v2 for clusters running v1.27 or newer because it offers significantly better performance characteristics than v1 [v1.27:tasks/administer-cluster/kms-provider#c1]. On 1.31, the documentation states that KMS v1 is deprecated (since Kubernetes v1.28) and disabled by default (since Kubernetes v1.29), and recommends using KMS v2 if feasible [v1.31:tasks/administer-cluster/kms-provider#c1].",
           "citations": [
             {
               "doc_id": "tasks/administer-cluster/kms-provider",
               "chunk_id": "v1.27:tasks/administer-cluster/kms-provider#c1",
               "version": "1.27",
               "quote": "New integrations that only need to support Kubernetes v1.27+\nshould use KMS v2 as it offers significantly better performance characteristics than v1"
+            },
+            {
+              "doc_id": "tasks/administer-cluster/kms-provider",
+              "chunk_id": "v1.31:tasks/administer-cluster/kms-provider#c1",
+              "version": "1.31",
+              "quote": "KMS v1 is deprecated (since Kubernetes v1.28) and disabled by default (since Kubernetes v1.29)."
             }
           ]
         },
@@ -367,7 +394,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9942,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -375,7 +401,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 875,
+          "latency_ms": 1292,
+          "timing_ms": {
+            "retrieve": 1282,
+            "first_attempt": 10,
+            "retry": 0,
+            "total": 1292
+          },
+          "retry_added": null,
           "answer": "On 1.27, the Evented PLEG feature is in beta [v1.27:tasks/administer-cluster/switch-to-evented-pleg#c1]. On 1.31, the Evented PLEG feature is in alpha [v1.31:tasks/administer-cluster/switch-to-evented-pleg#c1].",
           "citations": [
             {
@@ -400,7 +433,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9985,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -408,7 +440,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1151,
+          "latency_ms": 1790,
+          "timing_ms": {
+            "retrieve": 1787,
+            "first_attempt": 3,
+            "retry": 0,
+            "total": 1790
+          },
+          "retry_added": null,
           "answer": "On 1.27, the Job pod failure policy feature is in beta [v1.27:concepts/workloads/controllers/job#c15]. On 1.31, the Job pod failure policy feature is stable (generally available) [v1.31:concepts/workloads/controllers/job#c18].",
           "citations": [
             {
@@ -433,13 +472,19 @@
           "correct": true,
           "refused": true,
           "confidence": 0.6454,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 958,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The provided documentation excerpts do not mention the maximum number of nodes a single Kubernetes cluster officially supports.",
+          "latency_ms": 1362,
+          "timing_ms": {
+            "retrieve": 1351,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1362
+          },
+          "retry_added": 0,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not provide any information about the maximum number of nodes a Kubernetes cluster officially supports.",
           "citations": []
         },
         {
@@ -450,13 +495,19 @@
           "correct": true,
           "refused": true,
           "confidence": 0.2424,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 1100,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not provide any guidance on RAM requirements for etcd, even for large clusters such as a 500-node cluster.",
+          "latency_ms": 1589,
+          "timing_ms": {
+            "retrieve": 1578,
+            "first_attempt": 10,
+            "retry": 1,
+            "total": 1589
+          },
+          "retry_added": 0,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not provide any information about RAM requirements or recommendations for etcd, even for a 500-node cluster.",
           "citations": []
         },
         {
@@ -467,13 +518,19 @@
           "correct": true,
           "refused": true,
           "confidence": 0.9421,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 864,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not provide the release date for Kubernetes v1.31.",
+          "latency_ms": 1364,
+          "timing_ms": {
+            "retrieve": 1362,
+            "first_attempt": 1,
+            "retry": 1,
+            "total": 1364
+          },
+          "retry_added": 0,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not mention the release date of Kubernetes v1.31.",
           "citations": []
         },
         {
@@ -484,13 +541,19 @@
           "correct": true,
           "refused": true,
           "confidence": 0.9184,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 1146,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not mention any uptime SLA for the Kubernetes API server.",
+          "latency_ms": 1522,
+          "timing_ms": {
+            "retrieve": 1511,
+            "first_attempt": 10,
+            "retry": 1,
+            "total": 1522
+          },
+          "retry_added": 0,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The provided excerpts do not mention any uptime service level agreement (SLA) for the Kubernetes API server.",
           "citations": []
         },
         {
@@ -501,12 +564,18 @@
           "correct": true,
           "refused": true,
           "confidence": 0.6363,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 979,
+          "latency_ms": 1364,
+          "timing_ms": {
+            "retrieve": 1353,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1364
+          },
+          "retry_added": null,
           "answer": "I can't answer this from the 1.27 or 1.31 documentation: The provided documentation excerpts do not mention the default CPU and memory requests for the CoreDNS deployment.",
           "citations": []
         },
@@ -518,13 +587,19 @@
           "correct": true,
           "refused": true,
           "confidence": 0.0947,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 726,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The provided excerpts for releases 1.27 and 1.31 do not mention any recommendation or default for the maximum number of Services per namespace.",
+          "latency_ms": 1007,
+          "timing_ms": {
+            "retrieve": 996,
+            "first_attempt": 10,
+            "retry": 1,
+            "total": 1007
+          },
+          "retry_added": 0,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not mention any recommended maximum number of Services per namespace.",
           "citations": []
         },
         {
@@ -535,13 +610,19 @@
           "correct": true,
           "refused": true,
           "confidence": 0.9826,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 1325,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not provide any information about the time required for a kubeadm upgrade from 1.30 to 1.31.",
+          "latency_ms": 2643,
+          "timing_ms": {
+            "retrieve": 2630,
+            "first_attempt": 12,
+            "retry": 1,
+            "total": 2643
+          },
+          "retry_added": 0,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not provide any information about the typical duration of a kubeadm upgrade from 1.30 to 1.31.",
           "citations": []
         },
         {
@@ -552,12 +633,18 @@
           "correct": true,
           "refused": true,
           "confidence": 0.9862,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 657,
+          "latency_ms": 1373,
+          "timing_ms": {
+            "retrieve": 1362,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1373
+          },
+          "retry_added": 0,
           "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not mention which cloud providers are certified conformant for Kubernetes 1.31.",
           "citations": []
         },
@@ -569,12 +656,15 @@
           "correct": true,
           "refused": true,
           "confidence": 0.8378,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
           "latency_ms": 0,
+          "timing_ms": {
+            "total": 0
+          },
+          "retry_added": null,
           "answer": "Neither the 1.27 nor the 1.31 documentation mentions `--max-pod-lag`, so I can't confirm it exists or say how it behaves.",
           "citations": []
         },
@@ -586,12 +676,15 @@
           "correct": true,
           "refused": true,
           "confidence": 0.0633,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
           "latency_ms": 0,
+          "timing_ms": {
+            "total": 0
+          },
+          "retry_added": null,
           "answer": "Neither the 1.27 nor the 1.31 documentation mentions `podautorepair`, so I can't confirm it exists or say how it behaves.",
           "citations": []
         },
@@ -603,12 +696,15 @@
           "correct": true,
           "refused": true,
           "confidence": 0.9452,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
           "latency_ms": 0,
+          "timing_ms": {
+            "total": 0
+          },
+          "retry_added": null,
           "answer": "Neither the 1.27 nor the 1.31 documentation mentions `--enable-swap-autotune`, so I can't confirm it exists or say how it behaves.",
           "citations": []
         },
@@ -620,7 +716,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9996,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
@@ -628,7 +723,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1363,
+          "latency_ms": 2717,
+          "timing_ms": {
+            "retrieve": 2707,
+            "first_attempt": 2,
+            "retry": 0,
+            "total": 2717
+          },
+          "retry_added": null,
           "answer": "On 1.31, an OCI image can be mounted as a volume by setting the `volumes[*].image` field in the pod spec and referencing it in `volumeMounts`, which is an alpha‑stage feature [v1.31:tasks/configure-pod-container/image-volumes#c2] [v1.31:concepts/storage/volumes#c18]. The 1.27 documentation excerpts do not cover mounting an OCI image as a volume.",
           "citations": [
             {
@@ -653,14 +755,20 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9995,
-          "validator_confidence": 0.5,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1352,
+          "latency_ms": 2176,
+          "timing_ms": {
+            "retrieve": 2164,
+            "first_attempt": 11,
+            "retry": 1,
+            "total": 2176
+          },
+          "retry_added": 0,
           "answer": "On 1.31, a VolumeAttributesClass is used when a PersistentVolume (PV) belonging to the class needs to be dynamically provisioned or modified [v1.31:concepts/storage/volume-attributes-classes#c2].",
           "citations": [
             {
@@ -676,17 +784,32 @@
           "type": "version_gap",
           "question": "How do sidecar containers work when declared as init containers with restartPolicy Always?",
           "expected": "documented in 1.31 (dedicated Sidecar Containers page); 1.27 only mentions sidecars as a logging pattern",
-          "correct": false,
-          "refused": true,
+          "correct": true,
+          "refused": false,
           "confidence": 0.9997,
-          "validator_confidence": 0.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
-          "citations_valid": [],
+          "citations_valid": [
+            true
+          ],
           "marker_integrity": true,
-          "latency_ms": 2026,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: none of the drafted sentences survived citation checking.",
-          "citations": []
+          "latency_ms": 3398,
+          "timing_ms": {
+            "retrieve": 2364,
+            "first_attempt": 1034,
+            "retry": 0,
+            "total": 3398
+          },
+          "retry_added": null,
+          "answer": "On 1.31, an init container with `restartPolicy: Always` is treated as a sidecar that starts and remains running for the entire Pod lifetime [v1.31:concepts/workloads/pods/_index#c16]. The 1.27 documentation excerpts do not cover sidecar containers declared as init containers with restartPolicy Always.",
+          "citations": [
+            {
+              "doc_id": "concepts/workloads/pods/_index",
+              "chunk_id": "v1.31:concepts/workloads/pods/_index#c16",
+              "version": "1.31",
+              "quote": "treated as _sidecars_ that are kept running during the entire lifetime of the Pod"
+            }
+          ]
         },
         {
           "qid": "T-24",
@@ -696,14 +819,20 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9051,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1706,
+          "latency_ms": 2649,
+          "timing_ms": {
+            "retrieve": 2647,
+            "first_attempt": 2,
+            "retry": 0,
+            "total": 2649
+          },
+          "retry_added": null,
           "answer": "On 1.27, the default node-monitor-grace-period is 40 seconds [v1.27:concepts/architecture/nodes#c8].",
           "citations": [
             {
@@ -722,14 +851,20 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9988,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1576,
+          "latency_ms": 2289,
+          "timing_ms": {
+            "retrieve": 2278,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 2289
+          },
+          "retry_added": null,
           "answer": "The default terminationGracePeriodSeconds for a Pod is 30 seconds [v1.27:concepts/workloads/pods/pod-lifecycle#c22].",
           "citations": [
             {
@@ -748,14 +883,20 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9991,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1639,
+          "latency_ms": 1694,
+          "timing_ms": {
+            "retrieve": 1684,
+            "first_attempt": 10,
+            "retry": 0,
+            "total": 1694
+          },
+          "retry_added": null,
           "answer": "On both releases, the default NodePort port range is 30000-32767 [v1.27:concepts/services-networking/service#c15].",
           "citations": [
             {
@@ -774,7 +915,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9193,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
@@ -782,7 +922,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1784,
+          "latency_ms": 1693,
+          "timing_ms": {
+            "retrieve": 1682,
+            "first_attempt": 10,
+            "retry": 0,
+            "total": 1693
+          },
+          "retry_added": null,
           "answer": "A ConfigMap cannot exceed 1 MiB of data [v1.27:concepts/configuration/configmap#c1] [v1.31:concepts/configuration/configmap#c1].",
           "citations": [
             {
@@ -804,17 +951,32 @@
           "type": "factual",
           "question": "What is the size limit of an individual Secret?",
           "expected": "1MiB",
-          "correct": false,
-          "refused": true,
+          "correct": true,
+          "refused": false,
           "confidence": 0.4182,
-          "validator_confidence": null,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
-          "citations_valid": [],
+          "citations_valid": [
+            true
+          ],
           "marker_integrity": true,
-          "latency_ms": 1034,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts mention a \"Size limit\" section for Secrets but do not provide the actual size limit value for an individual Secret in either release.",
-          "citations": []
+          "latency_ms": 1041,
+          "timing_ms": {
+            "retrieve": 1029,
+            "first_attempt": 10,
+            "retry": 2,
+            "total": 1041
+          },
+          "retry_added": 1,
+          "answer": "Individual Secrets are limited to 1MiB in size [v1.27:concepts/configuration/secret#c18].",
+          "citations": [
+            {
+              "doc_id": "concepts/configuration/secret",
+              "chunk_id": "v1.27:concepts/configuration/secret#c18",
+              "version": "1.27",
+              "quote": "Individual secrets are limited to 1MiB in size."
+            }
+          ]
         },
         {
           "qid": "T-29",
@@ -824,14 +986,20 @@
           "correct": true,
           "refused": false,
           "confidence": 0.2076,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1603,
+          "latency_ms": 1728,
+          "timing_ms": {
+            "retrieve": 1727,
+            "first_attempt": 1,
+            "retry": 0,
+            "total": 1728
+          },
+          "retry_added": null,
           "answer": "Label values must be 63 characters or less [v1.27:concepts/overview/working-with-objects/labels#c3].",
           "citations": [
             {
@@ -850,14 +1018,20 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9973,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1900,
+          "latency_ms": 2168,
+          "timing_ms": {
+            "retrieve": 2019,
+            "first_attempt": 149,
+            "retry": 0,
+            "total": 2168
+          },
+          "retry_added": null,
           "answer": "Node heartbeat Lease objects are stored in the `kube-node-lease` namespace [v1.27:concepts/overview/working-with-objects/namespaces#c3].",
           "citations": [
             {
@@ -876,7 +1050,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.999,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
@@ -884,7 +1057,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1419,
+          "latency_ms": 2005,
+          "timing_ms": {
+            "retrieve": 1994,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 2005
+          },
+          "retry_added": null,
           "answer": "On 1.27, when scaling down a ReplicaSet, if the `controller.kubernetes.io/pod-deletion-cost` annotation is set, the pod with the lower value is chosen first for deletion [v1.27:concepts/workloads/controllers/replicaset#c13]. On 1.31, when scaling down a ReplicaSet, if the `controller.kubernetes.io/pod-deletion-cost` annotation is set, the pod with the lower value is chosen first for deletion [v1.31:concepts/workloads/controllers/replicaset#c13].",
           "citations": [
             {
@@ -909,7 +1089,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9999,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
@@ -917,7 +1096,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1622,
+          "latency_ms": 2288,
+          "timing_ms": {
+            "retrieve": 2275,
+            "first_attempt": 12,
+            "retry": 0,
+            "total": 2288
+          },
+          "retry_added": null,
           "answer": "On 1.27, finished Jobs can be cleaned up automatically by specifying the `.spec.ttlSecondsAfterFinished` field, which the TTL-after-finished controller uses to delete the Job after the TTL expires [v1.27:concepts/workloads/controllers/ttlafterfinished#c2]. On 1.31, finished Jobs can be cleaned up automatically by specifying the `.spec.ttlSecondsAfterFinished` field, which the TTL-after-finished controller uses to delete the Job after the TTL expires [v1.31:concepts/workloads/controllers/ttlafterfinished#c2].",
           "citations": [
             {
@@ -942,22 +1128,35 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9998,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
             true,
+            true,
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1845,
-          "answer": "To safely drain a node, configure a PodDisruptionBudget (optionally setting `AlwaysAllow` Unhealthy Pod Eviction Policy), then run `kubectl drain` (which respects the budget and ignores certain system pods), and if DaemonSet pods exist, include `--ignore-daemonsets`; after the command succeeds, power down or delete the node and later run `kubectl uncordon` to resume scheduling [v1.27:tasks/administer-cluster/safely-drain-node#c2] [v1.27:tasks/administer-cluster/safely-drain-node#c4].",
+          "latency_ms": 2623,
+          "timing_ms": {
+            "retrieve": 1880,
+            "first_attempt": 743,
+            "retry": 0,
+            "total": 2623
+          },
+          "retry_added": null,
+          "answer": "To safely drain a node, configure a PodDisruptionBudget (optionally setting `AlwaysAllow` Unhealthy Pod Eviction Policy), then run `kubectl drain` (which respects the budget and ignores certain system pods), and if DaemonSet pods exist, include `--ignore-daemonsets`; after the command succeeds, power down or delete the node and later run `kubectl uncordon` to resume scheduling [v1.27:tasks/administer-cluster/safely-drain-node#c2] [v1.27:tasks/administer-cluster/safely-drain-node#c3] [v1.27:tasks/administer-cluster/safely-drain-node#c4].",
           "citations": [
             {
               "doc_id": "tasks/administer-cluster/safely-drain-node",
               "chunk_id": "v1.27:tasks/administer-cluster/safely-drain-node#c2",
               "version": "1.27",
               "quote": "It is recommended to set `AlwaysAllow` Unhealthy Pod Eviction Policy\nto your PodDisruptionBudgets"
+            },
+            {
+              "doc_id": "tasks/administer-cluster/safely-drain-node",
+              "chunk_id": "v1.27:tasks/administer-cluster/safely-drain-node#c3",
+              "version": "1.27",
+              "quote": "You can use `kubectl drain` to safely evict all of your pods from a\nnode"
             },
             {
               "doc_id": "tasks/administer-cluster/safely-drain-node",
@@ -975,7 +1174,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9999,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
@@ -983,7 +1181,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1044,
+          "latency_ms": 1913,
+          "timing_ms": {
+            "retrieve": 1902,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1913
+          },
+          "retry_added": null,
           "answer": "On 1.27, you can create a Secret directly with kubectl using a command such as `kubectl create secret generic test-secret --from-literal='username=my-app' --from-literal='password=39528$vdg7Jb'` [v1.27:tasks/inject-data-application/distribute-credentials-secure#c3]. On 1.31, you can also create a Secret directly with kubectl using a similar command, for example `kubectl create secret generic test-secret --from-literal='username=my-app' --from-literal='password=39528$vdg7Jb'` [v1.31:tasks/inject-data-application/distribute-credentials-secure#c3].",
           "citations": [
             {
@@ -1008,7 +1213,6 @@
           "correct": false,
           "refused": false,
           "confidence": 0.9997,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
@@ -1018,7 +1222,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1910,
+          "latency_ms": 3312,
+          "timing_ms": {
+            "retrieve": 2403,
+            "first_attempt": 909,
+            "retry": 0,
+            "total": 3312
+          },
+          "retry_added": null,
           "answer": "On 1.27, you enable encryption at rest for Secrets by creating an EncryptionConfiguration that includes a provider such as aescbc and then restarting the kube‑apiserver [v1.27:tasks/administer-cluster/encrypt-data#c1] [v1.27:tasks/administer-cluster/encrypt-data#c17]. On 1.31, you enable encryption at rest for Secrets by adding a non‑identity provider (e.g., aescbc) to the EncryptionConfiguration file and restarting the kube‑apiserver [v1.31:tasks/administer-cluster/encrypt-data#c1] [v1.31:tasks/administer-cluster/encrypt-data#c23].",
           "citations": [
             {
@@ -1055,7 +1266,6 @@
           "correct": false,
           "refused": false,
           "confidence": 0.9995,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
@@ -1063,7 +1273,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1450,
+          "latency_ms": 2584,
+          "timing_ms": {
+            "retrieve": 2572,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 2584
+          },
+          "retry_added": null,
           "answer": "Add a label (e.g., `ssd=true`) to the target node and set the Pod’s `nodeSelector` to match that label so the scheduler places the Pod on that node [v1.27:tasks/manage-daemon/pods-some-nodes#c2].",
           "citations": [
             {
@@ -1083,8 +1300,8 @@
       ]
     },
     "dev": {
-      "questions": 10,
-      "accuracy": 0.8,
+      "questions": 20,
+      "accuracy": 0.95,
       "accuracy_by_type": {
         "factual": {
           "n": 3,
@@ -1092,8 +1309,8 @@
           "accuracy": 1.0
         },
         "false_premise": {
-          "n": 1,
-          "correct": 1,
+          "n": 2,
+          "correct": 2,
           "accuracy": 1.0
         },
         "procedural": {
@@ -1102,38 +1319,44 @@
           "accuracy": 0.0
         },
         "unanswerable": {
-          "n": 2,
-          "correct": 2,
+          "n": 4,
+          "correct": 4,
           "accuracy": 1.0
         },
         "version_conflict": {
-          "n": 2,
-          "correct": 2,
+          "n": 8,
+          "correct": 8,
           "accuracy": 1.0
         },
         "version_gap": {
-          "n": 1,
-          "correct": 0,
-          "accuracy": 0.0
+          "n": 2,
+          "correct": 2,
+          "accuracy": 1.0
         }
       },
       "refusal_rate_on_unanswerable": 1.0,
-      "false_refusal_rate": 0.143,
-      "hallucination_rate": 0.1,
+      "false_refusal_rate": 0.0,
+      "hallucination_rate": 0.05,
       "answered_but_should_refuse_rate": 0.0,
-      "answered_but_incomplete_rate": 0.1,
-      "version_conflict_pass": "2/2",
+      "answered_but_incomplete_rate": 0.05,
+      "version_conflict_pass": "8/8",
       "citation_validity": 1.0,
-      "citations_checked": 10,
+      "citations_checked": 27,
       "marker_integrity": 1.0,
       "retrieval_recall_at_5": 1.0,
       "conflict_both_versions_at_5": 1.0,
       "wrong_answer_attribution": {
         "retrieval": 0,
-        "generation_or_gates": 2
+        "generation_or_gates": 1
       },
-      "p95_latency_ms": 1791,
-      "median_latency_ms": 1515,
+      "p95_latency_ms": 2624,
+      "median_latency_ms": 2082,
+      "median_step_ms": {
+        "retrieve": 2116,
+        "first_attempt": 11,
+        "retry": 0
+      },
+      "retries": "2 tried, 0 added sentences",
       "most_confidently_wrong": [
         {
           "qid": "D-10",
@@ -1143,32 +1366,6 @@
           "confidence": 0.9995,
           "refused": false,
           "answer": "On 1.27, you expose ConfigMap data as environment variables by defining an env entry that references a key in the ConfigMap, e.g., assigning the `special.how` value to the `SPECIAL_LEVEL_KEY` variable [v1.27:tasks/configure-pod-container/configure-pod-configmap#c12]. On 1.31, you expose ConfigMap data as environment variables by defining an env entry that references a key in the ConfigMap, e.g., assigning the `special.how` value to the `SPECIAL_LEVEL_KEY` variable [v1.31:tasks/configure-pod-container/configure-pod-configmap#c12]."
-        },
-        {
-          "qid": "D-06",
-          "type": "version_gap",
-          "question": "What does coordinated leader election do?",
-          "expected": "only 1.31 documents it; 1.27 does not cover it",
-          "confidence": 0.9973,
-          "refused": true,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: none of the drafted sentences survived citation checking."
-        }
-      ],
-      "confidence_buckets": [
-        {
-          "drafted_sentences_kept": "under half kept",
-          "answered": 0,
-          "accuracy": 0.0
-        },
-        {
-          "drafted_sentences_kept": "half or more kept",
-          "answered": 0,
-          "accuracy": 0.0
-        },
-        {
-          "drafted_sentences_kept": "all kept",
-          "answered": 6,
-          "accuracy": 0.833
         }
       ],
       "rows": [
@@ -1180,7 +1377,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9986,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -1188,7 +1384,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1443,
+          "latency_ms": 2571,
+          "timing_ms": {
+            "retrieve": 2560,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 2571
+          },
+          "retry_added": null,
           "answer": "On 1.27, the node log query feature is in alpha stage [v1.27:concepts/cluster-administration/system-logs#c10]. On 1.31, the node log query feature is in beta stage [v1.31:concepts/cluster-administration/system-logs#c10].",
           "citations": [
             {
@@ -1213,7 +1416,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9998,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -1221,7 +1423,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1133,
+          "latency_ms": 2042,
+          "timing_ms": {
+            "retrieve": 2031,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 2042
+          },
+          "retry_added": null,
           "answer": "On 1.27, the API Priority and Fairness feature is in beta (FEATURE STATE: Kubernetes v1.20 [beta]) [v1.27:concepts/cluster-administration/flow-control#c1]. On 1.31, the API Priority and Fairness feature is stable (FEATURE STATE: Kubernetes v1.29 [stable]) [v1.31:concepts/cluster-administration/flow-control#c1].",
           "citations": [
             {
@@ -1246,13 +1455,19 @@
           "correct": true,
           "refused": true,
           "confidence": 0.9218,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 1521,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The provided excerpts for releases 1.27 and 1.31 do not mention the kubelet --max-pods flag or its default value.",
+          "latency_ms": 2533,
+          "timing_ms": {
+            "retrieve": 2522,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 2533
+          },
+          "retry_added": 0,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The provided excerpts do not mention the --max-pods flag or its default value.",
           "citations": []
         },
         {
@@ -1263,12 +1478,15 @@
           "correct": true,
           "refused": true,
           "confidence": 0.0063,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 1523,
+          "latency_ms": 2441,
+          "timing_ms": {
+            "total": 2441
+          },
+          "retry_added": null,
           "answer": "Nothing in the 1.27 or 1.31 documentation I indexed is relevant to this question, so I can't answer it from the docs.",
           "citations": []
         },
@@ -1280,12 +1498,15 @@
           "correct": true,
           "refused": true,
           "confidence": 0.9371,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
           "latency_ms": 0,
+          "timing_ms": {
+            "total": 0
+          },
+          "retry_added": null,
           "answer": "Neither the 1.27 nor the 1.31 documentation mentions `--eviction-grace-multiplier`, so I can't confirm it exists or say how it behaves.",
           "citations": []
         },
@@ -1294,17 +1515,39 @@
           "type": "version_gap",
           "question": "What does coordinated leader election do?",
           "expected": "only 1.31 documents it; 1.27 does not cover it",
-          "correct": false,
-          "refused": true,
+          "correct": true,
+          "refused": false,
           "confidence": 0.9973,
-          "validator_confidence": 0.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
-          "citations_valid": [],
+          "citations_valid": [
+            true,
+            true
+          ],
           "marker_integrity": true,
-          "latency_ms": 1545,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: none of the drafted sentences survived citation checking.",
-          "citations": []
+          "latency_ms": 2131,
+          "timing_ms": {
+            "retrieve": 2120,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 2131
+          },
+          "retry_added": null,
+          "answer": "On 1.31, coordinated leader election allows control plane components to deterministically select a leader, which helps satisfy version skew constraints during cluster upgrades [v1.31:concepts/cluster-administration/coordinated-leader-election#c1]. On 1.31, this section is marked FEATURE STATE: Kubernetes v1.31 [alpha] (feature gate `CoordinatedLeaderElection`) [v1.31:concepts/cluster-administration/coordinated-leader-election#c1]. The 1.27 documentation excerpts do not cover coordinated leader election.",
+          "citations": [
+            {
+              "doc_id": "concepts/cluster-administration/coordinated-leader-election",
+              "chunk_id": "v1.31:concepts/cluster-administration/coordinated-leader-election#c1",
+              "version": "1.31",
+              "quote": "Kubernetes 1.31 includes an alpha feature that allows control plane components to\ndeterministically select a leader via _coordinated leader election_.\nThis is useful to satisfy Kubernetes version skew constraints during cluster upgrades."
+            },
+            {
+              "doc_id": "concepts/cluster-administration/coordinated-leader-election",
+              "chunk_id": "v1.31:concepts/cluster-administration/coordinated-leader-election#c1",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.31 [alpha] (feature gate `CoordinatedLeaderElection`)"
+            }
+          ]
         },
         {
           "qid": "D-07",
@@ -1314,14 +1557,20 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9992,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1515,
+          "latency_ms": 2032,
+          "timing_ms": {
+            "retrieve": 2031,
+            "first_attempt": 1,
+            "retry": 0,
+            "total": 2032
+          },
+          "retry_added": null,
           "answer": "The default restartPolicy for a Pod is Always [v1.27:concepts/workloads/pods/pod-lifecycle#c9].",
           "citations": [
             {
@@ -1340,7 +1589,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9998,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
@@ -1348,7 +1596,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1505,
+          "latency_ms": 1535,
+          "timing_ms": {
+            "retrieve": 1524,
+            "first_attempt": 10,
+            "retry": 0,
+            "total": 1535
+          },
+          "retry_added": null,
           "answer": "On 1.27, Kubernetes starts with four initial namespaces: default, kube-node-lease, kube-public, and kube-system [v1.27:concepts/overview/working-with-objects/namespaces#c3]. On 1.31, Kubernetes starts with four initial namespaces: default, kube-node-lease, kube-public, and kube-system [v1.31:concepts/overview/working-with-objects/namespaces#c3].",
           "citations": [
             {
@@ -1373,14 +1628,20 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9956,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1791,
+          "latency_ms": 1757,
+          "timing_ms": {
+            "retrieve": 1746,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1757
+          },
+          "retry_added": null,
           "answer": "The name segment of an annotation key must be 63 characters or less [v1.27:concepts/overview/working-with-objects/annotations#c4].",
           "citations": [
             {
@@ -1399,7 +1660,6 @@
           "correct": false,
           "refused": false,
           "confidence": 0.9995,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
@@ -1407,7 +1667,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1739,
+          "latency_ms": 2274,
+          "timing_ms": {
+            "retrieve": 2262,
+            "first_attempt": 12,
+            "retry": 0,
+            "total": 2274
+          },
+          "retry_added": null,
           "answer": "On 1.27, you expose ConfigMap data as environment variables by defining an env entry that references a key in the ConfigMap, e.g., assigning the `special.how` value to the `SPECIAL_LEVEL_KEY` variable [v1.27:tasks/configure-pod-container/configure-pod-configmap#c12]. On 1.31, you expose ConfigMap data as environment variables by defining an env entry that references a key in the ConfigMap, e.g., assigning the `special.how` value to the `SPECIAL_LEVEL_KEY` variable [v1.31:tasks/configure-pod-container/configure-pod-configmap#c12].",
           "citations": [
             {
@@ -1423,70 +1690,7 @@
               "quote": "Assign the `special.how` value defined in the ConfigMap to the `SPECIAL_LEVEL_KEY`\n   environment variable"
             }
           ]
-        }
-      ]
-    },
-    "postfail": {
-      "questions": 10,
-      "accuracy": 1.0,
-      "accuracy_by_type": {
-        "false_premise": {
-          "n": 1,
-          "correct": 1,
-          "accuracy": 1.0
         },
-        "unanswerable": {
-          "n": 2,
-          "correct": 2,
-          "accuracy": 1.0
-        },
-        "version_conflict": {
-          "n": 6,
-          "correct": 6,
-          "accuracy": 1.0
-        },
-        "version_gap": {
-          "n": 1,
-          "correct": 1,
-          "accuracy": 1.0
-        }
-      },
-      "refusal_rate_on_unanswerable": 1.0,
-      "false_refusal_rate": 0.0,
-      "hallucination_rate": 0.0,
-      "answered_but_should_refuse_rate": 0.0,
-      "answered_but_incomplete_rate": 0.0,
-      "version_conflict_pass": "6/6",
-      "citation_validity": 1.0,
-      "citations_checked": 15,
-      "marker_integrity": 1.0,
-      "retrieval_recall_at_5": 1.0,
-      "conflict_both_versions_at_5": 1.0,
-      "wrong_answer_attribution": {
-        "retrieval": 0,
-        "generation_or_gates": 0
-      },
-      "p95_latency_ms": 1698,
-      "median_latency_ms": 1175,
-      "most_confidently_wrong": [],
-      "confidence_buckets": [
-        {
-          "drafted_sentences_kept": "under half kept",
-          "answered": 0,
-          "accuracy": 0.0
-        },
-        {
-          "drafted_sentences_kept": "half or more kept",
-          "answered": 0,
-          "accuracy": 0.0
-        },
-        {
-          "drafted_sentences_kept": "all kept",
-          "answered": 7,
-          "accuracy": 1.0
-        }
-      ],
-      "rows": [
         {
           "qid": "P-01",
           "type": "version_conflict",
@@ -1495,7 +1699,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9965,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -1503,7 +1706,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1648,
+          "latency_ms": 2127,
+          "timing_ms": {
+            "retrieve": 2116,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 2127
+          },
+          "retry_added": null,
           "answer": "On 1.27, the feature state of contextual logging is alpha (Kubernetes v1.24) [v1.27:concepts/cluster-administration/system-logs#c6]. On 1.31, the feature state of contextual logging is beta (Kubernetes v1.30) [v1.31:concepts/cluster-administration/system-logs#c6].",
           "citations": [
             {
@@ -1528,7 +1738,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9993,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -1538,7 +1747,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1698,
+          "latency_ms": 2624,
+          "timing_ms": {
+            "retrieve": 2609,
+            "first_attempt": 15,
+            "retry": 0,
+            "total": 2624
+          },
+          "retry_added": null,
           "answer": "On 1.27, you can scale Indexed Jobs up or down by mutating both `.spec.parallelism` and `.spec.completions` together such that `.spec.parallelism == .spec.completions` [v1.27:concepts/workloads/controllers/job#c33]. On 1.27, the ElasticIndexedJob feature is in beta [v1.27:concepts/workloads/controllers/job#c33]. On 1.31, you can scale Indexed Jobs up or down by mutating both `.spec.parallelism` and `.spec.completions` together such that `.spec.parallelism == .spec.completions` [v1.31:concepts/workloads/controllers/job#c41]. On 1.31, the ElasticIndexedJob feature is stable [v1.31:concepts/workloads/controllers/job#c41].",
           "citations": [
             {
@@ -1575,7 +1791,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9998,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -1583,7 +1798,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1136,
+          "latency_ms": 1993,
+          "timing_ms": {
+            "retrieve": 1982,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1993
+          },
+          "retry_added": null,
           "answer": "On 1.27, container resource metrics are in beta [v1.27:tasks/run-application/horizontal-pod-autoscale#c11]. On 1.31, container resource metrics are stable [v1.31:tasks/run-application/horizontal-pod-autoscale#c11].",
           "citations": [
             {
@@ -1608,7 +1830,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9922,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -1616,7 +1837,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1529,
+          "latency_ms": 2707,
+          "timing_ms": {
+            "retrieve": 2351,
+            "first_attempt": 355,
+            "retry": 0,
+            "total": 2707
+          },
+          "retry_added": null,
           "answer": "On 1.27, the ReadWriteOncePod access mode is in beta [v1.27:concepts/storage/persistent-volumes#c20]. On 1.31, the ReadWriteOncePod access mode is stable [v1.31:concepts/storage/persistent-volumes#c21].",
           "citations": [
             {
@@ -1641,7 +1869,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9875,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -1649,7 +1876,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1175,
+          "latency_ms": 2082,
+          "timing_ms": {
+            "retrieve": 2070,
+            "first_attempt": 12,
+            "retry": 0,
+            "total": 2082
+          },
+          "retry_added": null,
           "answer": "On 1.31, the PodReadyToStartContainers condition is in beta, as indicated by the feature state line [v1.31:concepts/workloads/pods/pod-lifecycle#c17]. On 1.27, the same section states FEATURE STATE: Kubernetes v1.25 [alpha] [v1.27:concepts/workloads/pods/pod-lifecycle#c13].",
           "citations": [
             {
@@ -1674,7 +1908,6 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9998,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": true,
           "citations_valid": [
@@ -1682,7 +1915,14 @@
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1185,
+          "latency_ms": 2297,
+          "timing_ms": {
+            "retrieve": 2294,
+            "first_attempt": 3,
+            "retry": 0,
+            "total": 2297
+          },
+          "retry_added": null,
           "answer": "On 1.27, Pod disruption conditions are in beta as indicated by “FEATURE STATE: Kubernetes v1.26 [beta]” [v1.27:concepts/workloads/pods/disruptions#c9]. On 1.31, Pod disruption conditions are stable as indicated by “FEATURE STATE: Kubernetes v1.31 [stable]” [v1.31:concepts/workloads/pods/disruptions#c9].",
           "citations": [
             {
@@ -1707,12 +1947,18 @@
           "correct": true,
           "refused": true,
           "confidence": 0.9762,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 1149,
+          "latency_ms": 2424,
+          "timing_ms": {
+            "retrieve": 2412,
+            "first_attempt": 12,
+            "retry": 0,
+            "total": 2424
+          },
+          "retry_added": null,
           "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not mention any limit on the number of Pods per namespace.",
           "citations": []
         },
@@ -1724,13 +1970,19 @@
           "correct": true,
           "refused": true,
           "confidence": 0.4508,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
-          "latency_ms": 976,
-          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not state a recommended number of control plane nodes for a 2,000-node cluster.",
+          "latency_ms": 1434,
+          "timing_ms": {
+            "retrieve": 1422,
+            "first_attempt": 11,
+            "retry": 1,
+            "total": 1434
+          },
+          "retry_added": 0,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts do not state how many control plane nodes are recommended for a 2,000-node cluster.",
           "citations": []
         },
         {
@@ -1741,12 +1993,15 @@
           "correct": true,
           "refused": true,
           "confidence": 0.9556,
-          "validator_confidence": null,
           "gold_retrieved": null,
           "both_versions_retrieved": null,
           "citations_valid": [],
           "marker_integrity": true,
           "latency_ms": 0,
+          "timing_ms": {
+            "total": 0
+          },
+          "retry_added": null,
           "answer": "Neither the 1.27 nor the 1.31 documentation mentions `--swap-burst-limit`, so I can't confirm it exists or say how it behaves.",
           "citations": []
         },
@@ -1758,14 +2013,20 @@
           "correct": true,
           "refused": false,
           "confidence": 0.9976,
-          "validator_confidence": 1.0,
           "gold_retrieved": true,
           "both_versions_retrieved": null,
           "citations_valid": [
             true
           ],
           "marker_integrity": true,
-          "latency_ms": 1592,
+          "latency_ms": 2023,
+          "timing_ms": {
+            "retrieve": 2010,
+            "first_attempt": 13,
+            "retry": 0,
+            "total": 2023
+          },
+          "retry_added": null,
           "answer": "On 1.31, you add a new ServiceCIDR object with the desired CIDR (e.g., 10.96.0.0/24) to extend the Service IP range [v1.31:tasks/network/extend-service-ip-ranges#c3]. The 1.27 documentation excerpts do not cover this.",
           "citations": [
             {
@@ -1777,13 +2038,1286 @@
           ]
         }
       ]
+    },
+    "holdout": {
+      "questions": 20,
+      "accuracy": 0.95,
+      "accuracy_by_type": {
+        "factual": {
+          "n": 7,
+          "correct": 6,
+          "accuracy": 0.857
+        },
+        "false_premise": {
+          "n": 2,
+          "correct": 2,
+          "accuracy": 1.0
+        },
+        "unanswerable": {
+          "n": 3,
+          "correct": 3,
+          "accuracy": 1.0
+        },
+        "version_conflict": {
+          "n": 5,
+          "correct": 5,
+          "accuracy": 1.0
+        },
+        "version_gap": {
+          "n": 3,
+          "correct": 3,
+          "accuracy": 1.0
+        }
+      },
+      "refusal_rate_on_unanswerable": 1.0,
+      "false_refusal_rate": 0.0,
+      "hallucination_rate": 0.05,
+      "answered_but_should_refuse_rate": 0.0,
+      "answered_but_incomplete_rate": 0.05,
+      "version_conflict_pass": "5/5",
+      "citation_validity": 1.0,
+      "citations_checked": 31,
+      "marker_integrity": 1.0,
+      "retrieval_recall_at_5": 1.0,
+      "conflict_both_versions_at_5": 1.0,
+      "wrong_answer_attribution": {
+        "retrieval": 0,
+        "generation_or_gates": 1
+      },
+      "p95_latency_ms": 2104,
+      "median_latency_ms": 1731,
+      "median_step_ms": {
+        "retrieve": 1759,
+        "first_attempt": 11,
+        "retry": 0
+      },
+      "retries": "5 tried, 2 added sentences",
+      "most_confidently_wrong": [
+        {
+          "qid": "H-15",
+          "type": "factual",
+          "question": "how many search domains can i put in a pods dns config before k8s starts complaining",
+          "expected": "more than 32 domains or over 2048 characters total",
+          "confidence": 0.9304,
+          "refused": false,
+          "answer": "On 1.27, Kubernetes does not limit the DNS Config until the length of the search domain list exceeds 32 [v1.27:concepts/services-networking/dns-pod-service#c13]. On 1.31, Kubernetes does not limit the DNS Config until the length of the search domain list exceeds 32 [v1.31:concepts/services-networking/dns-pod-service#c13]."
+        }
+      ],
+      "rows": [
+        {
+          "qid": "H-01",
+          "type": "version_conflict",
+          "question": "Is the unhealthyPodEvictionPolicy field on PodDisruptionBudgets beta or stable?",
+          "expected": "beta (v1.27) on 1.27; stable on 1.31 (PDBUnhealthyPodEvictionPolicy GA in v1.31)",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9301,
+          "gold_retrieved": true,
+          "both_versions_retrieved": true,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1880,
+          "timing_ms": {
+            "retrieve": 1817,
+            "first_attempt": 61,
+            "retry": 2,
+            "total": 1880
+          },
+          "retry_added": 1,
+          "answer": "On 1.31, the Unhealthy Pod Eviction Policy feature is stable [v1.31:tasks/run-application/configure-pdb#c10]. On 1.27, the Unhealthy Pod Eviction Policy feature is in beta [v1.27:tasks/run-application/configure-pdb#c9].",
+          "citations": [
+            {
+              "doc_id": "tasks/run-application/configure-pdb",
+              "chunk_id": "v1.31:tasks/run-application/configure-pdb#c10",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.31 [stable] (feature gate `PDBUnhealthyPodEvictionPolicy`)"
+            },
+            {
+              "doc_id": "tasks/run-application/configure-pdb",
+              "chunk_id": "v1.27:tasks/run-application/configure-pdb#c9",
+              "version": "1.27",
+              "quote": "FEATURE STATE: Kubernetes v1.27 [beta]"
+            }
+          ]
+        },
+        {
+          "qid": "H-02",
+          "type": "version_conflict",
+          "question": "What is the maturity of aggregated discovery for the Kubernetes API?",
+          "expected": "beta (v1.27) on 1.27; stable (v1.30) on 1.31",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9906,
+          "gold_retrieved": true,
+          "both_versions_retrieved": true,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1600,
+          "timing_ms": {
+            "retrieve": 1586,
+            "first_attempt": 13,
+            "retry": 0,
+            "total": 1600
+          },
+          "retry_added": null,
+          "answer": "On 1.27, aggregated discovery is in beta [v1.27:concepts/overview/kubernetes-api#c6]. On 1.31, aggregated discovery is stable [v1.31:concepts/overview/kubernetes-api#c4].",
+          "citations": [
+            {
+              "doc_id": "concepts/overview/kubernetes-api",
+              "chunk_id": "v1.27:concepts/overview/kubernetes-api#c6",
+              "version": "1.27",
+              "quote": "FEATURE STATE: Kubernetes v1.27 [beta]"
+            },
+            {
+              "doc_id": "concepts/overview/kubernetes-api",
+              "chunk_id": "v1.31:concepts/overview/kubernetes-api#c4",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.30 [stable] (feature gate `AggregatedDiscoveryEndpoint`)"
+            }
+          ]
+        },
+        {
+          "qid": "H-03",
+          "type": "version_conflict",
+          "question": "What is the feature state of the PersistentVolume deletion protection finalizer?",
+          "expected": "alpha (v1.23) on 1.27; beta (v1.31, HonorPVReclaimPolicy) on 1.31",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9992,
+          "gold_retrieved": true,
+          "both_versions_retrieved": true,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1847,
+          "timing_ms": {
+            "retrieve": 1836,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1847
+          },
+          "retry_added": null,
+          "answer": "On 1.27, the PersistentVolume deletion protection finalizer is in alpha stage (FEATURE STATE: Kubernetes v1.23 [alpha]) [v1.27:concepts/storage/persistent-volumes#c9]. On 1.31, the PersistentVolume deletion protection finalizer is in beta stage (FEATURE STATE: Kubernetes v1.31 [beta] (feature gate `HonorPVReclaimPolicy`)) [v1.31:concepts/storage/persistent-volumes#c10].",
+          "citations": [
+            {
+              "doc_id": "concepts/storage/persistent-volumes",
+              "chunk_id": "v1.27:concepts/storage/persistent-volumes#c9",
+              "version": "1.27",
+              "quote": "FEATURE STATE: Kubernetes v1.23 [alpha]"
+            },
+            {
+              "doc_id": "concepts/storage/persistent-volumes",
+              "chunk_id": "v1.31:concepts/storage/persistent-volumes#c10",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.31 [beta] (feature gate `HonorPVReclaimPolicy`)"
+            }
+          ]
+        },
+        {
+          "qid": "H-04",
+          "type": "version_conflict",
+          "question": "Are the DNS search domain list limits (32 domains, 2048 characters) a beta or stable feature?",
+          "expected": "beta (1.26) on 1.27; stable (1.28) on 1.31",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9933,
+          "gold_retrieved": true,
+          "both_versions_retrieved": true,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1840,
+          "timing_ms": {
+            "retrieve": 1829,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1840
+          },
+          "retry_added": null,
+          "answer": "On 1.27, the DNS search domain list limits are marked as beta [v1.27:concepts/services-networking/dns-pod-service#c13]. On 1.31, the DNS search domain list limits are marked as stable [v1.31:concepts/services-networking/dns-pod-service#c13].",
+          "citations": [
+            {
+              "doc_id": "concepts/services-networking/dns-pod-service",
+              "chunk_id": "v1.27:concepts/services-networking/dns-pod-service#c13",
+              "version": "1.27",
+              "quote": "FEATURE STATE: Kubernetes 1.26 [beta]"
+            },
+            {
+              "doc_id": "concepts/services-networking/dns-pod-service",
+              "chunk_id": "v1.31:concepts/services-networking/dns-pod-service#c13",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes 1.28 [stable]"
+            }
+          ]
+        },
+        {
+          "qid": "H-05",
+          "type": "version_conflict",
+          "question": "What is the maturity of filesystem project quota monitoring for local ephemeral storage?",
+          "expected": "alpha (v1.15) on 1.27; beta (v1.31) on 1.31",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.966,
+          "gold_retrieved": true,
+          "both_versions_retrieved": true,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1731,
+          "timing_ms": {
+            "retrieve": 1719,
+            "first_attempt": 12,
+            "retry": 0,
+            "total": 1731
+          },
+          "retry_added": null,
+          "answer": "On 1.27, filesystem project quota monitoring is in alpha maturity [v1.27:concepts/configuration/manage-resources-containers#c18]. On 1.31, filesystem project quota monitoring is in beta maturity [v1.31:concepts/configuration/manage-resources-containers#c20].",
+          "citations": [
+            {
+              "doc_id": "concepts/configuration/manage-resources-containers",
+              "chunk_id": "v1.27:concepts/configuration/manage-resources-containers#c18",
+              "version": "1.27",
+              "quote": "FEATURE STATE: Kubernetes v1.15 [alpha]"
+            },
+            {
+              "doc_id": "concepts/configuration/manage-resources-containers",
+              "chunk_id": "v1.31:concepts/configuration/manage-resources-containers#c20",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.31 [beta] (feature gate `LocalStorageCapacityIsolationFSQuotaMonitoring`)"
+            }
+          ]
+        },
+        {
+          "qid": "H-06",
+          "type": "factual",
+          "question": "is kubelet tracing still beta or did it go GA?",
+          "expected": "beta (since v1.27) in both 1.27 and 1.31; no change",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.8926,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1509,
+          "timing_ms": {
+            "retrieve": 1508,
+            "first_attempt": 1,
+            "retry": 0,
+            "total": 1509
+          },
+          "retry_added": null,
+          "answer": "On 1.27, kubelet tracing is in beta [v1.27:concepts/cluster-administration/system-traces#c4].",
+          "citations": [
+            {
+              "doc_id": "concepts/cluster-administration/system-traces",
+              "chunk_id": "v1.27:concepts/cluster-administration/system-traces#c4",
+              "version": "1.27",
+              "quote": "FEATURE STATE: Kubernetes v1.27 [beta]"
+            }
+          ]
+        },
+        {
+          "qid": "H-07",
+          "type": "version_gap",
+          "question": "How does validation ratcheting work for CustomResourceDefinitions?",
+          "expected": "only 1.31 documents it (beta, v1.30, CRDValidationRatcheting); 1.27 does not cover it",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9975,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1944,
+          "timing_ms": {
+            "retrieve": 1934,
+            "first_attempt": 2,
+            "retry": 0,
+            "total": 1944
+          },
+          "retry_added": null,
+          "answer": "On 1.31, validation ratcheting allows the API server to accept updates to resources that become invalid after the update, as long as the parts that failed validation were not changed by the update operation [v1.31:tasks/extend-kubernetes/custom-resources/custom-resource-definitions#c16]. On 1.31, this section is marked FEATURE STATE: Kubernetes v1.30 [beta] (feature gate `CRDValidationRatcheting`) [v1.31:tasks/extend-kubernetes/custom-resources/custom-resource-definitions#c16]. The 1.27 documentation excerpts do not cover this.",
+          "citations": [
+            {
+              "doc_id": "tasks/extend-kubernetes/custom-resources/custom-resource-definitions",
+              "chunk_id": "v1.31:tasks/extend-kubernetes/custom-resources/custom-resource-definitions#c16",
+              "version": "1.31",
+              "quote": "The API server is willing to accept updates to resources that\nare not valid after the update, provided that each part of the resource that failed to validate\nwas not changed by the update operation"
+            },
+            {
+              "doc_id": "tasks/extend-kubernetes/custom-resources/custom-resource-definitions",
+              "chunk_id": "v1.31:tasks/extend-kubernetes/custom-resources/custom-resource-definitions#c16",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.30 [beta] (feature gate `CRDValidationRatcheting`)"
+            }
+          ]
+        },
+        {
+          "qid": "H-08",
+          "type": "version_gap",
+          "question": "Can I use matchLabelKeys inside podAffinity rules?",
+          "expected": "only 1.31 documents it (beta, v1.31, MatchLabelKeysInPodAffinity); 1.27 does not cover it",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9927,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 2104,
+          "timing_ms": {
+            "retrieve": 1792,
+            "first_attempt": 312,
+            "retry": 0,
+            "total": 2104
+          },
+          "retry_added": null,
+          "answer": "On 1.27, `matchLabelKeys` is described only for topology spread constraints and not for pod affinity rules [v1.27:concepts/scheduling-eviction/topology-spread-constraints#c6]. On 1.31, an optional `matchLabelKeys` field is available for Pod affinity or anti‑affinity rules [v1.31:concepts/scheduling-eviction/assign-pod-node#c13]. On 1.31, this section is marked FEATURE STATE: Kubernetes v1.31 [beta] (feature gate `MatchLabelKeysInPodAffinity`) [v1.31:concepts/scheduling-eviction/assign-pod-node#c13].",
+          "citations": [
+            {
+              "doc_id": "concepts/scheduling-eviction/topology-spread-constraints",
+              "chunk_id": "v1.27:concepts/scheduling-eviction/topology-spread-constraints#c6",
+              "version": "1.27",
+              "quote": "matchLabelKeys** is a list of pod label keys to select the pods over which\n  spreading will be calculated"
+            },
+            {
+              "doc_id": "concepts/scheduling-eviction/assign-pod-node",
+              "chunk_id": "v1.31:concepts/scheduling-eviction/assign-pod-node#c13",
+              "version": "1.31",
+              "quote": "Kubernetes includes an optional `matchLabelKeys` field for Pod affinity\nor anti-affinity."
+            },
+            {
+              "doc_id": "concepts/scheduling-eviction/assign-pod-node",
+              "chunk_id": "v1.31:concepts/scheduling-eviction/assign-pod-node#c13",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.31 [beta] (feature gate `MatchLabelKeysInPodAffinity`)"
+            }
+          ]
+        },
+        {
+          "qid": "H-09",
+          "type": "version_gap",
+          "question": "How do I control supplemental groups with supplementalGroupsPolicy in a Pod securityContext?",
+          "expected": "only 1.31 documents it (alpha, v1.31, SupplementalGroupsPolicy); 1.27 does not cover it",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9995,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 2313,
+          "timing_ms": {
+            "retrieve": 1763,
+            "first_attempt": 549,
+            "retry": 0,
+            "total": 2313
+          },
+          "retry_added": null,
+          "answer": "On 1.31, you control supplemental groups by setting the `.spec.securityContext.supplementalGroupsPolicy` field, which can be `Merge` (the default) or `Strict` [v1.31:tasks/configure-pod-container/security-context#c5]. On 1.31, this section is marked FEATURE STATE: Kubernetes v1.31 [alpha] (feature gate `SupplementalGroupsPolicy`) [v1.31:tasks/configure-pod-container/security-context#c5]. The 1.27 documentation excerpts do not cover this.",
+          "citations": [
+            {
+              "doc_id": "tasks/configure-pod-container/security-context",
+              "chunk_id": "v1.31:tasks/configure-pod-container/security-context#c5",
+              "version": "1.31",
+              "quote": "The `supplementalGroupsPolicy` field defines the policy for calculating the\nsupplementary groups"
+            },
+            {
+              "doc_id": "tasks/configure-pod-container/security-context",
+              "chunk_id": "v1.31:tasks/configure-pod-container/security-context#c5",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.31 [alpha] (feature gate `SupplementalGroupsPolicy`)"
+            }
+          ]
+        },
+        {
+          "qid": "H-10",
+          "type": "factual",
+          "question": "How many old ReplicaSets does a Deployment keep for rollback by default?",
+          "expected": "10 (.spec.revisionHistoryLimit)",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9997,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1669,
+          "timing_ms": {
+            "retrieve": 1658,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1669
+          },
+          "retry_added": null,
+          "answer": "On 1.27, the default number of old ReplicaSets retained for rollback is 10 [v1.27:concepts/workloads/controllers/deployment#c43]. On 1.31, the default number of old ReplicaSets retained for rollback is 10 [v1.31:concepts/workloads/controllers/deployment#c44].",
+          "citations": [
+            {
+              "doc_id": "concepts/workloads/controllers/deployment",
+              "chunk_id": "v1.27:concepts/workloads/controllers/deployment#c43",
+              "version": "1.27",
+              "quote": "By default, 10 old ReplicaSets will be kept"
+            },
+            {
+              "doc_id": "concepts/workloads/controllers/deployment",
+              "chunk_id": "v1.31:concepts/workloads/controllers/deployment#c44",
+              "version": "1.31",
+              "quote": "By default, 10 old ReplicaSets will be kept"
+            }
+          ]
+        },
+        {
+          "qid": "H-11",
+          "type": "factual",
+          "question": "What is the default back-off limit for a Job?",
+          "expected": "6",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9903,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1916,
+          "timing_ms": {
+            "retrieve": 1570,
+            "first_attempt": 193,
+            "retry": 153,
+            "total": 1916
+          },
+          "retry_added": 0,
+          "answer": "On 1.31, the back‑off limit is set by default to 6 [v1.31:concepts/workloads/controllers/job#c15].",
+          "citations": [
+            {
+              "doc_id": "concepts/workloads/controllers/job",
+              "chunk_id": "v1.31:concepts/workloads/controllers/job#c15",
+              "version": "1.31",
+              "quote": "The back-off limit is set by default to 6"
+            }
+          ]
+        },
+        {
+          "qid": "H-12",
+          "type": "factual",
+          "question": "How long is a projected service account token valid by default, and what is the minimum?",
+          "expected": "1 hour by default; at least 10 minutes (600 seconds)",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9903,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1503,
+          "timing_ms": {
+            "retrieve": 1492,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1503
+          },
+          "retry_added": null,
+          "answer": "On 1.27, the projected service account token defaults to 1 hour and must be at least 10 minutes (600 seconds) [v1.27:concepts/storage/projected-volumes#c3]. On 1.31, the projected service account token defaults to 1 hour and must be at least 10 minutes (600 seconds) [v1.31:concepts/storage/projected-volumes#c3].",
+          "citations": [
+            {
+              "doc_id": "concepts/storage/projected-volumes",
+              "chunk_id": "v1.27:concepts/storage/projected-volumes#c3",
+              "version": "1.27",
+              "quote": "It defaults to 1 hour and must be at least 10 minutes (600 seconds)."
+            },
+            {
+              "doc_id": "concepts/storage/projected-volumes",
+              "chunk_id": "v1.31:concepts/storage/projected-volumes#c3",
+              "version": "1.31",
+              "quote": "It defaults to 1 hour and must be at least 10 minutes (600 seconds)."
+            }
+          ]
+        },
+        {
+          "qid": "H-13",
+          "type": "factual",
+          "question": "What are the default maxSurge and maxUnavailable for a Deployment rolling update?",
+          "expected": "25% each",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9955,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1592,
+          "timing_ms": {
+            "retrieve": 1580,
+            "first_attempt": 10,
+            "retry": 2,
+            "total": 1592
+          },
+          "retry_added": 2,
+          "answer": "On 1.27, the default maxSurge and maxUnavailable are both 25% [v1.27:concepts/workloads/controllers/deployment#c40] [v1.27:concepts/workloads/controllers/deployment#c39]. On 1.31, the default maxSurge and maxUnavailable are both 25% [v1.31:concepts/workloads/controllers/deployment#c40] [v1.31:concepts/workloads/controllers/deployment#c39].",
+          "citations": [
+            {
+              "doc_id": "concepts/workloads/controllers/deployment",
+              "chunk_id": "v1.27:concepts/workloads/controllers/deployment#c40",
+              "version": "1.27",
+              "quote": "The default value is 25%."
+            },
+            {
+              "doc_id": "concepts/workloads/controllers/deployment",
+              "chunk_id": "v1.27:concepts/workloads/controllers/deployment#c39",
+              "version": "1.27",
+              "quote": "The default value is 25%."
+            },
+            {
+              "doc_id": "concepts/workloads/controllers/deployment",
+              "chunk_id": "v1.31:concepts/workloads/controllers/deployment#c40",
+              "version": "1.31",
+              "quote": "The default value is 25%."
+            },
+            {
+              "doc_id": "concepts/workloads/controllers/deployment",
+              "chunk_id": "v1.31:concepts/workloads/controllers/deployment#c39",
+              "version": "1.31",
+              "quote": "The default value is 25%."
+            }
+          ]
+        },
+        {
+          "qid": "H-14",
+          "type": "factual",
+          "question": "What is the default hard eviction threshold for memory on Linux nodes?",
+          "expected": "memory.available<100Mi",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9975,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1784,
+          "timing_ms": {
+            "retrieve": 1772,
+            "first_attempt": 12,
+            "retry": 0,
+            "total": 1784
+          },
+          "retry_added": null,
+          "answer": "On 1.27, the default hard eviction threshold for memory is `memory.available<100Mi` [v1.27:concepts/scheduling-eviction/node-pressure-eviction#c6]. On 1.31, the default hard eviction threshold for memory on Linux nodes is `memory.available<100Mi` [v1.31:concepts/scheduling-eviction/node-pressure-eviction#c10].",
+          "citations": [
+            {
+              "doc_id": "concepts/scheduling-eviction/node-pressure-eviction",
+              "chunk_id": "v1.27:concepts/scheduling-eviction/node-pressure-eviction#c6",
+              "version": "1.27",
+              "quote": "The kubelet has the following default hard eviction thresholds:\n\n- `memory.available<100Mi"
+            },
+            {
+              "doc_id": "concepts/scheduling-eviction/node-pressure-eviction",
+              "chunk_id": "v1.31:concepts/scheduling-eviction/node-pressure-eviction#c10",
+              "version": "1.31",
+              "quote": "- `memory.available<100Mi` (Linux nodes)"
+            }
+          ]
+        },
+        {
+          "qid": "H-15",
+          "type": "factual",
+          "question": "how many search domains can i put in a pods dns config before k8s starts complaining",
+          "expected": "more than 32 domains or over 2048 characters total",
+          "correct": false,
+          "refused": false,
+          "confidence": 0.9304,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1761,
+          "timing_ms": {
+            "retrieve": 1759,
+            "first_attempt": 2,
+            "retry": 0,
+            "total": 1761
+          },
+          "retry_added": null,
+          "answer": "On 1.27, Kubernetes does not limit the DNS Config until the length of the search domain list exceeds 32 [v1.27:concepts/services-networking/dns-pod-service#c13]. On 1.31, Kubernetes does not limit the DNS Config until the length of the search domain list exceeds 32 [v1.31:concepts/services-networking/dns-pod-service#c13].",
+          "citations": [
+            {
+              "doc_id": "concepts/services-networking/dns-pod-service",
+              "chunk_id": "v1.27:concepts/services-networking/dns-pod-service#c13",
+              "version": "1.27",
+              "quote": "Kubernetes itself does not limit the DNS Config until the length of the search\ndomain list exceeds 32"
+            },
+            {
+              "doc_id": "concepts/services-networking/dns-pod-service",
+              "chunk_id": "v1.31:concepts/services-networking/dns-pod-service#c13",
+              "version": "1.31",
+              "quote": "Kubernetes itself does not limit the DNS Config until the length of the search\ndomain list exceeds 32"
+            }
+          ]
+        },
+        {
+          "qid": "H-16",
+          "type": "unanswerable",
+          "question": "What is the default maxSurge for Deployments in Kubernetes 1.35?",
+          "expected": "not covered: only 1.27 and 1.31 are indexed",
+          "correct": true,
+          "refused": true,
+          "confidence": 0.9478,
+          "gold_retrieved": null,
+          "both_versions_retrieved": null,
+          "citations_valid": [],
+          "marker_integrity": true,
+          "latency_ms": 2006,
+          "timing_ms": {
+            "retrieve": 1995,
+            "first_attempt": 10,
+            "retry": 1,
+            "total": 2006
+          },
+          "retry_added": 0,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The provided excerpts cover releases 1.27 and 1.31 and do not mention the default maxSurge value for Deployments in Kubernetes 1.35.",
+          "citations": []
+        },
+        {
+          "qid": "H-17",
+          "type": "unanswerable",
+          "question": "How much does GKE Autopilot charge per vCPU hour?",
+          "expected": "not covered: no cloud pricing in the docs",
+          "correct": true,
+          "refused": true,
+          "confidence": 0.0,
+          "gold_retrieved": null,
+          "both_versions_retrieved": null,
+          "citations_valid": [],
+          "marker_integrity": true,
+          "latency_ms": 1684,
+          "timing_ms": {
+            "total": 1684
+          },
+          "retry_added": null,
+          "answer": "Nothing in the 1.27 or 1.31 documentation I indexed is relevant to this question, so I can't answer it from the docs.",
+          "citations": []
+        },
+        {
+          "qid": "H-18",
+          "type": "unanswerable",
+          "question": "Who led the Kubernetes v1.31 release team?",
+          "expected": "not covered: release team members are not in the docs",
+          "correct": true,
+          "refused": true,
+          "confidence": 0.6451,
+          "gold_retrieved": null,
+          "both_versions_retrieved": null,
+          "citations_valid": [],
+          "marker_integrity": true,
+          "latency_ms": 1593,
+          "timing_ms": {
+            "retrieve": 1582,
+            "first_attempt": 10,
+            "retry": 1,
+            "total": 1593
+          },
+          "retry_added": 0,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The provided excerpts do not mention who led the Kubernetes v1.31 release team.",
+          "citations": []
+        },
+        {
+          "qid": "H-19",
+          "type": "false_premise",
+          "question": "How do I set the kube-apiserver --pdb-default-max-unavailable flag?",
+          "expected": "no such flag is documented in either version",
+          "correct": true,
+          "refused": true,
+          "confidence": 0.9815,
+          "gold_retrieved": null,
+          "both_versions_retrieved": null,
+          "citations_valid": [],
+          "marker_integrity": true,
+          "latency_ms": 0,
+          "timing_ms": {
+            "total": 0
+          },
+          "retry_added": null,
+          "answer": "Neither the 1.27 nor the 1.31 documentation mentions `--pdb-default-max-unavailable`, so I can't confirm it exists or say how it behaves.",
+          "citations": []
+        },
+        {
+          "qid": "H-20",
+          "type": "false_premise",
+          "question": "What does the PodAutoScaleToZero feature gate do?",
+          "expected": "no such feature gate is documented in either version",
+          "correct": true,
+          "refused": true,
+          "confidence": 0.3242,
+          "gold_retrieved": null,
+          "both_versions_retrieved": null,
+          "citations_valid": [],
+          "marker_integrity": true,
+          "latency_ms": 0,
+          "timing_ms": {
+            "total": 0
+          },
+          "retry_added": null,
+          "answer": "Neither the 1.27 nor the 1.31 documentation mentions `podautoscaletozero`, so I can't confirm it exists or say how it behaves.",
+          "citations": []
+        }
+      ]
+    },
+    "holdout2": {
+      "questions": 13,
+      "accuracy": 0.846,
+      "accuracy_by_type": {
+        "factual": {
+          "n": 3,
+          "correct": 2,
+          "accuracy": 0.667
+        },
+        "false_premise": {
+          "n": 1,
+          "correct": 1,
+          "accuracy": 1.0
+        },
+        "unanswerable": {
+          "n": 2,
+          "correct": 2,
+          "accuracy": 1.0
+        },
+        "version_conflict": {
+          "n": 3,
+          "correct": 3,
+          "accuracy": 1.0
+        },
+        "version_gap": {
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        }
+      },
+      "refusal_rate_on_unanswerable": 1.0,
+      "false_refusal_rate": 0.0,
+      "hallucination_rate": 0.154,
+      "answered_but_should_refuse_rate": 0.0,
+      "answered_but_incomplete_rate": 0.154,
+      "version_conflict_pass": "3/3",
+      "citation_validity": 1.0,
+      "citations_checked": 17,
+      "marker_integrity": 1.0,
+      "retrieval_recall_at_5": 1.0,
+      "conflict_both_versions_at_5": 1.0,
+      "wrong_answer_attribution": {
+        "retrieval": 0,
+        "generation_or_gates": 2
+      },
+      "p95_latency_ms": 3477,
+      "median_latency_ms": 1670,
+      "median_step_ms": {
+        "retrieve": 1609,
+        "first_attempt": 11,
+        "retry": 0
+      },
+      "retries": "1 tried, 0 added sentences",
+      "most_confidently_wrong": [
+        {
+          "qid": "G-05",
+          "type": "version_gap",
+          "question": "How do I add selectable fields to a custom resource so it can be filtered with field selectors?",
+          "expected": "only 1.31 documents it (beta, v1.31, CustomResourceFieldSelectors); 1.27 does not cover it",
+          "confidence": 0.9984,
+          "refused": false,
+          "answer": "On 1.31, selectable fields are added by listing them in the CustomResourceDefinition’s `spec.versions[*].selectableFields` field, which is enabled by default via the `CustomResourceFieldSelectors` feature gate [v1.31:concepts/extend-kubernetes/api-extension/custom-resources#c17]."
+        },
+        {
+          "qid": "G-10",
+          "type": "factual",
+          "question": "whats the biggest priority value i can give my own priorityclass",
+          "expected": "1000000000 (one billion); larger values are reserved for system classes",
+          "confidence": 0.9709,
+          "refused": false,
+          "answer": "The maximum value you can assign to your own PriorityClass is 1 billion [v1.27:concepts/scheduling-eviction/pod-priority-preemption#c3]."
+        }
+      ],
+      "rows": [
+        {
+          "qid": "G-01",
+          "type": "version_conflict",
+          "question": "What is the maturity of monitoring device plugin resources through the kubelet's pod resources API?",
+          "expected": "beta (v1.15) on 1.27; stable (v1.28) on 1.31",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9919,
+          "gold_retrieved": true,
+          "both_versions_retrieved": true,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1529,
+          "timing_ms": {
+            "retrieve": 1518,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1529
+          },
+          "retry_added": null,
+          "answer": "On 1.27, monitoring device plugin resources through the kubelet's pod resources API is in beta (FEATURE STATE: Kubernetes v1.15 [beta]) [v1.27:concepts/extend-kubernetes/compute-storage-net/device-plugins#c10]. On 1.31, monitoring device plugin resources through the kubelet's pod resources API is stable (FEATURE STATE: Kubernetes v1.28 [stable]) [v1.31:concepts/extend-kubernetes/compute-storage-net/device-plugins#c12].",
+          "citations": [
+            {
+              "doc_id": "concepts/extend-kubernetes/compute-storage-net/device-plugins",
+              "chunk_id": "v1.27:concepts/extend-kubernetes/compute-storage-net/device-plugins#c10",
+              "version": "1.27",
+              "quote": "FEATURE STATE: Kubernetes v1.15 [beta]"
+            },
+            {
+              "doc_id": "concepts/extend-kubernetes/compute-storage-net/device-plugins",
+              "chunk_id": "v1.31:concepts/extend-kubernetes/compute-storage-net/device-plugins#c12",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.28 [stable]"
+            }
+          ]
+        },
+        {
+          "qid": "G-02",
+          "type": "version_conflict",
+          "question": "Is the GetAllocatableResources gRPC endpoint beta or stable?",
+          "expected": "beta (v1.23) on 1.27; stable (v1.28) on 1.31",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9989,
+          "gold_retrieved": true,
+          "both_versions_retrieved": true,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1583,
+          "timing_ms": {
+            "retrieve": 1572,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1583
+          },
+          "retry_added": null,
+          "answer": "On 1.27, the GetAllocatableResources gRPC endpoint is in beta [v1.27:concepts/extend-kubernetes/compute-storage-net/device-plugins#c14]. On 1.31, the GetAllocatableResources gRPC endpoint is stable [v1.31:concepts/extend-kubernetes/compute-storage-net/device-plugins#c16].",
+          "citations": [
+            {
+              "doc_id": "concepts/extend-kubernetes/compute-storage-net/device-plugins",
+              "chunk_id": "v1.27:concepts/extend-kubernetes/compute-storage-net/device-plugins#c14",
+              "version": "1.27",
+              "quote": "FEATURE STATE: Kubernetes v1.23 [beta]"
+            },
+            {
+              "doc_id": "concepts/extend-kubernetes/compute-storage-net/device-plugins",
+              "chunk_id": "v1.31:concepts/extend-kubernetes/compute-storage-net/device-plugins#c16",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.28 [stable]"
+            }
+          ]
+        },
+        {
+          "qid": "G-03",
+          "type": "version_conflict",
+          "question": "What is the feature state of user namespaces for Pods?",
+          "expected": "alpha (v1.25) on 1.27; beta (v1.30, UserNamespacesSupport) on 1.31",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9995,
+          "gold_retrieved": true,
+          "both_versions_retrieved": true,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1836,
+          "timing_ms": {
+            "retrieve": 1835,
+            "first_attempt": 1,
+            "retry": 0,
+            "total": 1836
+          },
+          "retry_added": null,
+          "answer": "On 1.27, user namespaces for Pods are in alpha stage (FEATURE STATE: Kubernetes v1.25 [alpha]) [v1.27:concepts/workloads/pods/user-namespaces#c1]. On 1.31, user namespaces for Pods are in beta stage (FEATURE STATE: Kubernetes v1.30 [beta]) [v1.31:concepts/workloads/pods/user-namespaces#c1].",
+          "citations": [
+            {
+              "doc_id": "concepts/workloads/pods/user-namespaces",
+              "chunk_id": "v1.27:concepts/workloads/pods/user-namespaces#c1",
+              "version": "1.27",
+              "quote": "FEATURE STATE: Kubernetes v1.25 [alpha]"
+            },
+            {
+              "doc_id": "concepts/workloads/pods/user-namespaces",
+              "chunk_id": "v1.31:concepts/workloads/pods/user-namespaces#c1",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.30 [beta]"
+            }
+          ]
+        },
+        {
+          "qid": "G-04",
+          "type": "version_gap",
+          "question": "How does image pull per runtime class work?",
+          "expected": "only 1.31 documents it (alpha, v1.29, RuntimeClassInImageCriApi); 1.27 does not cover it",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9997,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1623,
+          "timing_ms": {
+            "retrieve": 1609,
+            "first_attempt": 10,
+            "retry": 0,
+            "total": 1623
+          },
+          "retry_added": null,
+          "answer": "On 1.31, enabling the RuntimeClassInImageCriApi feature gate makes the kubelet reference container images by a tuple of (image name, runtime handler) instead of just the image name or digest, allowing image pulls to be performed based on the pod’s RuntimeClass [v1.31:concepts/containers/images#c9]. On 1.31, this section is marked FEATURE STATE: Kubernetes v1.29 [alpha] (feature gate `RuntimeClassInImageCriApi`) [v1.31:concepts/containers/images#c9]. The 1.27 documentation excerpts do not cover this.",
+          "citations": [
+            {
+              "doc_id": "concepts/containers/images",
+              "chunk_id": "v1.31:concepts/containers/images#c9",
+              "version": "1.31",
+              "quote": "the kubelet references container images by a tuple of (image name, runtime handler) rather than just the\nimage name or digest"
+            },
+            {
+              "doc_id": "concepts/containers/images",
+              "chunk_id": "v1.31:concepts/containers/images#c9",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.29 [alpha] (feature gate `RuntimeClassInImageCriApi`)"
+            }
+          ]
+        },
+        {
+          "qid": "G-05",
+          "type": "version_gap",
+          "question": "How do I add selectable fields to a custom resource so it can be filtered with field selectors?",
+          "expected": "only 1.31 documents it (beta, v1.31, CustomResourceFieldSelectors); 1.27 does not cover it",
+          "correct": false,
+          "refused": false,
+          "confidence": 0.9984,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 3477,
+          "timing_ms": {
+            "retrieve": 1719,
+            "first_attempt": 7,
+            "retry": 1751,
+            "total": 3477
+          },
+          "retry_added": 0,
+          "answer": "On 1.31, selectable fields are added by listing them in the CustomResourceDefinition’s `spec.versions[*].selectableFields` field, which is enabled by default via the `CustomResourceFieldSelectors` feature gate [v1.31:concepts/extend-kubernetes/api-extension/custom-resources#c17].",
+          "citations": [
+            {
+              "doc_id": "concepts/extend-kubernetes/api-extension/custom-resources",
+              "chunk_id": "v1.31:concepts/extend-kubernetes/api-extension/custom-resources#c17",
+              "version": "1.31",
+              "quote": "Fields declared in a CustomResourceDefinition\nmay also be used with field selectors when included in the `spec.versions[*].selectableFields` field of the\nCustomResourceDefinition"
+            }
+          ]
+        },
+        {
+          "qid": "G-06",
+          "type": "version_gap",
+          "question": "Can the kubelet read extra config files from a drop-in directory?",
+          "expected": "only 1.31 documents it (beta, v1.30); 1.27 does not cover it",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9977,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 2039,
+          "timing_ms": {
+            "retrieve": 1646,
+            "first_attempt": 393,
+            "retry": 0,
+            "total": 2039
+          },
+          "retry_added": null,
+          "answer": "On 1.31, the kubelet can read extra configuration files from a drop‑in directory, but by default it does not look for drop‑in files unless a path is specified [v1.31:tasks/administer-cluster/kubelet-config-file#c4]. On 1.31, this section is marked FEATURE STATE: Kubernetes v1.30 [beta] [v1.31:tasks/administer-cluster/kubelet-config-file#c4]. The 1.27 documentation excerpts do not cover this.",
+          "citations": [
+            {
+              "doc_id": "tasks/administer-cluster/kubelet-config-file",
+              "chunk_id": "v1.31:tasks/administer-cluster/kubelet-config-file#c4",
+              "version": "1.31",
+              "quote": "By default, the kubelet does not look\nfor drop-in configuration files anywhere - you must specify a path."
+            },
+            {
+              "doc_id": "tasks/administer-cluster/kubelet-config-file",
+              "chunk_id": "v1.31:tasks/administer-cluster/kubelet-config-file#c4",
+              "version": "1.31",
+              "quote": "FEATURE STATE: Kubernetes v1.30 [beta]"
+            }
+          ]
+        },
+        {
+          "qid": "G-07",
+          "type": "version_gap",
+          "question": "How do I migrate stored objects to a new storage version with StorageVersionMigration?",
+          "expected": "only 1.31 documents it (alpha, v1.30, StorageVersionMigrator); 1.27 has no such page",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9996,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1887,
+          "timing_ms": {
+            "retrieve": 1734,
+            "first_attempt": 153,
+            "retry": 0,
+            "total": 1887
+          },
+          "retry_added": null,
+          "answer": "On 1.31, you must first ensure the `StorageVersionMigrator` and `InformerResourceVersion` feature gates are enabled and the storage version migration REST API is turned on by setting runtime config `storagemigration.k8s.io/v1alpha1` to `true` for the API server [v1.31:tasks/manage-kubernetes-objects/storage-version-migration#c2]. After enabling the feature, you migrate stored objects by running the Storage Version Migrator, which updates objects to the new storage version and then you can remove the old version from the CRD's `status.storedVersions` field [v1.31:tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning#c34]. The 1.27 documentation excerpts do not cover StorageVersionMigration.",
+          "citations": [
+            {
+              "doc_id": "tasks/manage-kubernetes-objects/storage-version-migration",
+              "chunk_id": "v1.31:tasks/manage-kubernetes-objects/storage-version-migration#c2",
+              "version": "1.31",
+              "quote": "Enable storage version migration REST api by setting runtime config\n`storagemigration.k8s.io/v1alpha1` to `true"
+            },
+            {
+              "doc_id": "tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning",
+              "chunk_id": "v1.31:tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning#c34",
+              "version": "1.31",
+              "quote": "Option 1:* Use the Storage Version Migrator\n\n1. Run the storage Version migrator\n2. Remove the old version from the CustomResourceDefinition `status.storedVersions` field"
+            }
+          ]
+        },
+        {
+          "qid": "G-08",
+          "type": "factual",
+          "question": "Which PriorityClasses does Kubernetes ship with?",
+          "expected": "system-cluster-critical and system-node-critical",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.999,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true,
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1429,
+          "timing_ms": {
+            "retrieve": 1418,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1429
+          },
+          "retry_added": null,
+          "answer": "On 1.27, Kubernetes ships with two PriorityClasses: `system-cluster-critical` and `system-node-critical` [v1.27:concepts/scheduling-eviction/pod-priority-preemption#c2]. On 1.31, Kubernetes ships with two PriorityClasses: `system-cluster-critical` and `system-node-critical` [v1.31:concepts/scheduling-eviction/pod-priority-preemption#c2].",
+          "citations": [
+            {
+              "doc_id": "concepts/scheduling-eviction/pod-priority-preemption",
+              "chunk_id": "v1.27:concepts/scheduling-eviction/pod-priority-preemption#c2",
+              "version": "1.27",
+              "quote": "Kubernetes already ships with two PriorityClasses:\n`system-cluster-critical` and `system-node-critical`."
+            },
+            {
+              "doc_id": "concepts/scheduling-eviction/pod-priority-preemption",
+              "chunk_id": "v1.31:concepts/scheduling-eviction/pod-priority-preemption#c2",
+              "version": "1.31",
+              "quote": "Kubernetes already ships with two PriorityClasses:\n`system-cluster-critical` and `system-node-critical`."
+            }
+          ]
+        },
+        {
+          "qid": "G-09",
+          "type": "factual",
+          "question": "Which kubelet settings decide when image garbage collection starts and when it stops?",
+          "expected": "HighThresholdPercent starts it, LowThresholdPercent is where it stops",
+          "correct": true,
+          "refused": false,
+          "confidence": 0.9938,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1670,
+          "timing_ms": {
+            "retrieve": 1467,
+            "first_attempt": 203,
+            "retry": 0,
+            "total": 1670
+          },
+          "retry_added": null,
+          "answer": "The kubelet starts image garbage collection when disk usage exceeds the `HighThresholdPercent` value and stops when it falls to the `LowThresholdPercent` value [v1.27:concepts/architecture/garbage-collection#c8].",
+          "citations": [
+            {
+              "doc_id": "concepts/architecture/garbage-collection",
+              "chunk_id": "v1.27:concepts/architecture/garbage-collection#c8",
+              "version": "1.27",
+              "quote": "Disk usage above the configured `HighThresholdPercent` value triggers garbage\ncollection"
+            }
+          ]
+        },
+        {
+          "qid": "G-10",
+          "type": "factual",
+          "question": "whats the biggest priority value i can give my own priorityclass",
+          "expected": "1000000000 (one billion); larger values are reserved for system classes",
+          "correct": false,
+          "refused": false,
+          "confidence": 0.9709,
+          "gold_retrieved": true,
+          "both_versions_retrieved": null,
+          "citations_valid": [
+            true
+          ],
+          "marker_integrity": true,
+          "latency_ms": 1696,
+          "timing_ms": {
+            "retrieve": 1684,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1696
+          },
+          "retry_added": null,
+          "answer": "The maximum value you can assign to your own PriorityClass is 1 billion [v1.27:concepts/scheduling-eviction/pod-priority-preemption#c3].",
+          "citations": [
+            {
+              "doc_id": "concepts/scheduling-eviction/pod-priority-preemption",
+              "chunk_id": "v1.27:concepts/scheduling-eviction/pod-priority-preemption#c3",
+              "version": "1.27",
+              "quote": "A PriorityClass object can have any 32-bit integer value smaller than or equal\nto 1 billion."
+            }
+          ]
+        },
+        {
+          "qid": "G-11",
+          "type": "unanswerable",
+          "question": "What is the default container runtime in Kubernetes 1.36?",
+          "expected": "not covered: only 1.27 and 1.31 are indexed",
+          "correct": true,
+          "refused": true,
+          "confidence": 0.9869,
+          "gold_retrieved": null,
+          "both_versions_retrieved": null,
+          "citations_valid": [],
+          "marker_integrity": true,
+          "latency_ms": 1453,
+          "timing_ms": {
+            "retrieve": 1442,
+            "first_attempt": 11,
+            "retry": 0,
+            "total": 1453
+          },
+          "retry_added": null,
+          "answer": "I can't answer this from the 1.27 or 1.31 documentation: The excerpts only cover releases 1.27 and 1.31 and do not mention the default container runtime for Kubernetes 1.36.",
+          "citations": []
+        },
+        {
+          "qid": "G-12",
+          "type": "unanswerable",
+          "question": "How do I set up an Argo CD Application to sync my manifests?",
+          "expected": "not covered: Argo CD is not in the Kubernetes docs",
+          "correct": true,
+          "refused": true,
+          "confidence": 0.0257,
+          "gold_retrieved": null,
+          "both_versions_retrieved": null,
+          "citations_valid": [],
+          "marker_integrity": true,
+          "latency_ms": 1800,
+          "timing_ms": {
+            "total": 1800
+          },
+          "retry_added": null,
+          "answer": "Nothing in the 1.27 or 1.31 documentation I indexed is relevant to this question, so I can't answer it from the docs.",
+          "citations": []
+        },
+        {
+          "qid": "G-13",
+          "type": "false_premise",
+          "question": "What does the kubelet --image-pull-retries flag default to?",
+          "expected": "no such flag is documented in either version",
+          "correct": true,
+          "refused": true,
+          "confidence": 0.9874,
+          "gold_retrieved": null,
+          "both_versions_retrieved": null,
+          "citations_valid": [],
+          "marker_integrity": true,
+          "latency_ms": 0,
+          "timing_ms": {
+            "total": 0
+          },
+          "retry_added": null,
+          "answer": "Neither the 1.27 nor the 1.31 documentation mentions `--image-pull-retries`, so I can't confirm it exists or say how it behaves.",
+          "citations": []
+        }
+      ]
     }
   },
-  "runtime_s": 148,
+  "runtime_s": 330,
   "llm_replies": {
-    "live_calls": 0,
-    "replayed_from_cache": 50,
-    "mode": "replay",
+    "live_calls": 1,
+    "replayed_from_cache": 94,
+    "mode": "mixed",
     "note": "in a replay, latency excludes the model call; see the README for live latency"
   }
 }

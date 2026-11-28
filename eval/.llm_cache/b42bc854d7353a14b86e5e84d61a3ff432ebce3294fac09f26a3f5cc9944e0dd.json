@@ -1,0 +1,1 @@
+{"answerable":false,"sentences":[],"gaps":[],"missing":"The excerpts describe the default maxSurge for a Deployment rolling update as 25% (quoted in both releases), but they do not state the default maxUnavailable for Deployments; only the DaemonSet default is given."}

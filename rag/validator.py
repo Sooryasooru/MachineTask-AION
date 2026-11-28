@@ -7,33 +7,29 @@ A citation survives only if:
      the chunk's own original text, so it is an exact substring by construction.
 
 A sentence survives only if it keeps at least one citation, every number it states
-and every maturity word (alpha, beta, stable...) appears in the cited text, and the
-cited text supports it. Support is judged by an NLI model: a contradiction always
-drops the sentence; entailment keeps it; "neutral" keeps it only when most of the
-sentence's content words come from the verified quotes or the cited page's title and
-heading. NLI tends to call faithful paraphrases neutral, and this keeps those without
-letting new numbers or maturity claims through.
+and every maturity word (alpha, beta, stable...) appears in the cited text, and any
+release it names (1.27, v1.31...) is one it cites or one its cited text mentions.
+Those two are the claims that matter most here ("two" vs "three", "beta" vs
+"stable"), and plain string checks catch them reliably. An NLI support check was
+tried and removed; see docs/evaluation.md.
 """
 
 from __future__ import annotations
 
 import difflib
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from rag.chunker import Chunk
 from rag.generator import DraftSentence
-from rag.retriever import tokenize
-
-# (premise, hypothesis) pairs -> (contradiction, entailment, neutral) probabilities
-NliFn = Callable[[Sequence[tuple[str, str]]], Sequence[tuple[float, float, float]]]
 
 MIN_QUOTE_WORDS = 3
 ALIGN_MIN_RATIO = 0.9  # how close a near-verbatim quote must be to snap to the real text
-NEUTRAL_COVERAGE = 0.6
-PREMISE_WINDOW = 500  # characters kept either side of the quote
-_SKIP_CHARS = {"`", "*"}
+SEGMENT_MIN_WORDS = 6  # shortest piece of a spliced quote that can stand on its own
+_SEGMENT_SPLIT_RE = re.compile(r"\s*(?:\.\.\.|…)\s*|(?<=[.!?])\s+")
+CONTEXT_WINDOW = 500  # characters kept either side of the quote
+_SKIP_CHARS = {"`", "*", "_"}  # markdown code, bold and italic marks
 _TRANSLATE = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-"})
 _VERSION_PREFIX_RE = re.compile(r"^(on|in|for)\s+(kubernetes\s+)?v?1\.\d+\s*,?\s*", re.I)
 _VERSION_WORD_RE = re.compile(r"^v?1\.\d+$")
@@ -63,12 +59,10 @@ class VerifiedCitation:
 
 @dataclass(frozen=True)
 class VerifiedSentence:
-    """A sentence that passed both checks, with the scores that let it through."""
+    """A sentence that kept at least one verified citation and passed the checks."""
 
     text: str
     citations: tuple[VerifiedCitation, ...]
-    entailment: float
-    coverage: float
 
 
 def _normalise_with_map(text: str) -> tuple[str, list[int]]:
@@ -137,19 +131,36 @@ def _aligned_span(chunk_text: str, quote: str) -> tuple[int, int] | None:
     return best_start, best_end
 
 
+def _segment_span(chunk_text: str, quote: str) -> tuple[int, int] | None:
+    """Longest verbatim piece of a spliced quote.
+
+    The model sometimes joins two passages with "..." or swaps the order of two
+    sentences. Each piece is then still a real quote, so the longest piece that is
+    found verbatim (and long enough to mean something) is kept. The returned span is
+    the chunk's own text, and the sentence still has to pass the number and maturity
+    checks against it.
+    """
+    pieces = [p for p in _SEGMENT_SPLIT_RE.split(quote) if len(p.split()) >= SEGMENT_MIN_WORDS]
+    if not pieces or pieces == [quote.strip()]:
+        return None
+    found = [span for p in pieces if (span := _exact_span(chunk_text, p))]
+    return max(found, key=lambda sp: sp[1] - sp[0]) if found else None
+
+
 def locate_quote(chunk_text: str, quote: str) -> tuple[int, int] | None:
     """Find the quote in the chunk; return the (start, end) span in the original text.
 
     Exact match first, then whitespace/markdown-insensitive, then near-verbatim
-    alignment. Whatever matches, the caller gets a span of the chunk's own text.
+    alignment, then the longest verbatim piece of a spliced quote. Whatever matches,
+    the caller gets a span of the chunk's own text.
     """
     if len(quote.split()) < MIN_QUOTE_WORDS:
         return None
-    return _exact_span(chunk_text, quote) or _aligned_span(chunk_text, quote)
-
-
-def _content_words(text: str) -> set[str]:
-    return {t for t in tokenize(text) if not _VERSION_WORD_RE.match(t)}
+    return (
+        _exact_span(chunk_text, quote)
+        or _aligned_span(chunk_text, quote)
+        or _segment_span(chunk_text, quote)
+    )
 
 
 def numbers_in(text: str) -> set[str]:
@@ -168,14 +179,23 @@ def stages_in(text: str) -> set[str]:
     return {"stable" if f in ("ga", "generally available") else f for f in found}
 
 
+_RELEASE_RE = re.compile(r"\bv?(1\.\d{1,2})\b")
+
+
+def releases_in(text: str) -> set[str]:
+    """Kubernetes releases named in the text: 'v1.31' and '1.31' both give '1.31'."""
+    return set(_RELEASE_RE.findall(text))
+
+
 def strip_version_prefix(sentence: str) -> str:
-    """'On 1.31, the kubelet...' -> 'the kubelet...', so NLI judges the claim itself."""
+    """'On 1.31, the kubelet...' -> 'the kubelet...', so the release is not read as a number."""
     return _VERSION_PREFIX_RE.sub("", sentence).strip()
 
 
-def _premise(cite: VerifiedCitation) -> str:
+def _cited_context(cite: VerifiedCitation) -> str:
+    """The quote plus nearby text, page title and heading: what a sentence may rely on."""
     text = cite.chunk.text
-    lo, hi = max(0, cite.start - PREMISE_WINDOW), min(len(text), cite.end + PREMISE_WINDOW)
+    lo, hi = max(0, cite.start - CONTEXT_WINDOW), min(len(text), cite.end + CONTEXT_WINDOW)
     return (
         f"Kubernetes {cite.chunk.version} documentation, page "
         f'"{cite.chunk.title} > {cite.chunk.section}": {text[lo:hi]}'
@@ -201,80 +221,43 @@ def verify_citations(
 
 
 def validate_with_report(
-    sentences: Sequence[DraftSentence],
-    retrieved: dict[str, Chunk],
-    nli: NliFn | None,
-    entail_threshold: float,
+    sentences: Sequence[DraftSentence], retrieved: dict[str, Chunk]
 ) -> tuple[list[VerifiedSentence], list[dict[str, object]]]:
-    """Like `validate`, plus one verdict per proposed sentence saying why it stayed or went.
-
-    With `nli=None` the support check is skipped and only the quote, number and
-    maturity checks apply (used for the NLI ablation).
-    """
+    """Like `validate`, plus one verdict per proposed sentence saying why it stayed or went."""
     verdicts: list[dict[str, object]] = []
-    candidates = []
-    for s in sentences:
-        if not s.text:
+    kept: list[VerifiedSentence] = []
+    for sentence in sentences:
+        if not sentence.text:
             continue
-        cites = verify_citations(s, retrieved)
-        if cites:
-            candidates.append((s, cites))
-        else:
+        cites = verify_citations(sentence, retrieved)
+        if not cites:
             verdicts.append(
                 {
-                    "text": s.text,
+                    "text": sentence.text,
                     "kept": False,
                     "reason": "no verifiable citation",
-                    "proposed": [(c.chunk_id, c.quote[:80]) for c in s.citations],
+                    "proposed": [(c.chunk_id, c.quote[:80]) for c in sentence.citations],
                 }
             )
-    if not candidates:
-        return [], verdicts
-
-    pairs = [
-        (" ".join(_premise(c) for c in cites), strip_version_prefix(s.text))
-        for s, cites in candidates
-    ]
-    scores = nli(pairs) if nli is not None else [(0.0, 1.0, 0.0)] * len(pairs)
-
-    kept: list[VerifiedSentence] = []
-    for (sentence, cites), (contradiction, entailment, neutral) in zip(
-        candidates, scores, strict=True
-    ):
-        # The subject of a terse line like "FEATURE STATE: v1.30 [beta]" lives in the
-        # page title and heading, so those words count as cited context too.
-        words = _content_words(sentence.text)
-        context = set().union(
-            *(_content_words(f"{c.quote} {c.chunk.title} {c.chunk.section}") for c in cites)
-        )
-        coverage = len(words & context) / len(words) if words else 0.0
-        cited_text = " ".join(_premise(c) for c in cites)
-        verdict: dict[str, object] = {
-            "text": sentence.text,
-            "entailment": round(entailment, 3),
-            "contradiction": round(contradiction, 3),
-            "coverage": round(coverage, 3),
-        }
+            continue
+        cited_text = " ".join(_cited_context(c) for c in cites)
         claim = strip_version_prefix(sentence.text)
+        allowed_releases = {c.chunk.version for c in cites} | releases_in(cited_text)
         if not numbers_in(claim) <= numbers_in(cited_text):
-            verdicts.append({**verdict, "kept": False, "reason": "number not in cited text"})
+            reason = "number not in cited text"
+        elif not releases_in(claim) <= allowed_releases:
+            reason = "names a release it doesn't cite"
         elif not stages_in(claim) <= stages_in(cited_text):
-            verdicts.append({**verdict, "kept": False, "reason": "maturity not in cited text"})
-        elif contradiction >= max(entailment, neutral):
-            verdicts.append({**verdict, "kept": False, "reason": "contradicted by cited text"})
-        elif entailment >= entail_threshold or coverage >= NEUTRAL_COVERAGE:
-            verdicts.append({**verdict, "kept": True, "reason": "supported"})
-            kept.append(VerifiedSentence(sentence.text, tuple(cites), entailment, coverage))
+            reason = "maturity not in cited text"
         else:
-            verdicts.append({**verdict, "kept": False, "reason": "not supported enough"})
+            reason = "supported"
+            kept.append(VerifiedSentence(sentence.text, tuple(cites)))
+        verdicts.append({"text": sentence.text, "kept": reason == "supported", "reason": reason})
     return kept, verdicts
 
 
 def validate(
-    sentences: Sequence[DraftSentence],
-    retrieved: dict[str, Chunk],
-    nli: NliFn | None,
-    entail_threshold: float,
+    sentences: Sequence[DraftSentence], retrieved: dict[str, Chunk]
 ) -> list[VerifiedSentence]:
-    """Return the sentences that keep a verified citation and are supported by it."""
-    return validate_with_report(sentences, retrieved, nli, entail_threshold)[0]
+    """Return the sentences that keep a verified citation and pass the checks."""
+    return validate_with_report(sentences, retrieved)[0]

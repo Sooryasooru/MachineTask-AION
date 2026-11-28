@@ -7,6 +7,7 @@ or a 500, because the brief treats every response as part of the contract.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -19,6 +20,7 @@ from fastapi import FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 
+from app.config import settings
 from app.schemas import AskResponse
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -115,15 +117,30 @@ async def ask(request: Request) -> JSONResponse:
         return JSONResponse(resp.model_dump())
 
     try:
-        resp, trace = await run_in_threadpool(
-            pipeline.ask_traced, body.get("question", ""), body.get("top_k", 5), body.get("version")
+        resp, trace = await asyncio.wait_for(
+            run_in_threadpool(
+                pipeline.ask_traced,
+                body.get("question", ""),
+                body.get("top_k", 5),
+                body.get("version"),
+            ),
+            timeout=settings.request_timeout_s,
         )
         log.info(
-            "ask refused=%s reason=%s citations=%d latency_ms=%d",
+            "ask refused=%s reason=%s citations=%d retry=%s latency_ms=%d steps_ms=%s",
             resp.refused,
             trace.get("refusal", "-"),
             len(resp.citations),
+            "retry" in trace,
             resp.latency_ms,
+            trace.get("timing_ms", {}),
+        )
+    except TimeoutError:
+        log.warning("ask timed out after %.0f s", settings.request_timeout_s)
+        resp = _refusal(
+            f"No answer within {settings.request_timeout_s:.0f} seconds, so nothing was "
+            "returned. The language model may be slow or rate-limited; please try again.",
+            started,
         )
     except Exception:  # pylint: disable=broad-exception-caught  # last line of defence
         log.exception("unexpected error while answering")

@@ -1,4 +1,4 @@
-"""End-to-end pipeline with a fake LLM and fake NLI: every path returns the schema."""
+"""End-to-end pipeline with a fake LLM: every path returns the schema."""
 
 import json
 from collections.abc import Sequence
@@ -7,20 +7,18 @@ from pathlib import Path
 import pytest
 
 from app.schemas import AskResponse
+from rag.chunker import Chunk
 from rag.ingest import build_index
 from rag.llm import LLMError
-from rag.pipeline import Pipeline, load_known_terms
+from rag.pipeline import Pipeline, load_known_terms, stage_notes
 from rag.retriever import Retriever, tokenize
+from rag.validator import VerifiedCitation, VerifiedSentence
 from tests.test_ingest import fake_embed
 
 SKEW = {
     "1.27": "The kubelet may be up to two minor versions older than kube-apiserver.",
     "1.31": "The kubelet may be up to three minor versions older than kube-apiserver.",
 }
-
-
-def entail(pairs: Sequence[tuple[str, str]]) -> list[tuple[float, float, float]]:
-    return [(0.01, 0.98, 0.01) for _ in pairs]
 
 
 def rerank(query: str, texts: Sequence[str]) -> list[float]:
@@ -51,7 +49,7 @@ def make(index_dir: Path, reply: str | Exception) -> Pipeline:
             raise reply
         return reply
 
-    return Pipeline(retriever, llm, entail, load_known_terms(index_dir))
+    return Pipeline(retriever, llm, load_known_terms(index_dir))
 
 
 def conflict_reply() -> str:
@@ -226,3 +224,83 @@ def test_one_sided_answer_gets_other_release_feature_state(tmp_path: Path) -> No
     assert "[stable]" in resp.answer
     for cite in resp.citations:
         assert f"[{cite.chunk_id}]" in resp.answer
+
+
+def make_sequence(index_dir: Path, replies: list[str]) -> tuple[Pipeline, list[int]]:
+    """A pipeline whose fake model gives a different reply on each call."""
+    retriever = Retriever(index_dir, lambda q: fake_embed([q])[0], rerank)
+    calls = [0]
+
+    def llm(_: list[dict[str, str]]) -> str:
+        calls[0] += 1
+        return replies[min(calls[0], len(replies)) - 1]
+
+    return Pipeline(retriever, llm, load_known_terms(index_dir)), calls
+
+
+def one_sided_reply(bad_1_31_quote: bool) -> str:
+    reply = json.loads(conflict_reply())
+    if bad_1_31_quote:
+        reply["sentences"][1]["citations"][0]["quote"] = "kubelet may lag by eleven versions"
+    return json.dumps(reply)
+
+
+def test_retry_adds_the_missing_release_and_keeps_the_rest(index_dir: Path) -> None:
+    pipe, calls = make_sequence(index_dir, [one_sided_reply(True), one_sided_reply(False)])
+    resp, trace = pipe.ask_traced("How many minor versions may the kubelet lag?")
+    assert calls[0] == 2 and trace["retry"]["added"] == 1
+    assert {c.version for c in resp.citations} == {"1.27", "1.31"}
+
+
+def test_no_retry_when_nothing_was_lost(index_dir: Path) -> None:
+    pipe, calls = make_sequence(index_dir, [conflict_reply()])
+    _, trace = pipe.ask_traced("How many minor versions may the kubelet lag?")
+    assert calls[0] == 1 and "retry" not in trace
+    assert set(trace["timing_ms"]) >= {"retrieve", "first_attempt", "total"}
+
+
+def test_worse_retry_never_removes_what_was_kept(index_dir: Path) -> None:
+    unanswerable = json.dumps({"answerable": False, "sentences": [], "missing": "no idea"})
+    pipe, calls = make_sequence(index_dir, [one_sided_reply(True), unanswerable])
+    resp = pipe.ask_traced("How many minor versions may the kubelet lag?")[0]
+    assert calls[0] == 2 and not resp.refused
+    assert {c.version for c in resp.citations} == {"1.27"}
+
+
+def _verified(chunk_text: str, version: str = "1.31") -> VerifiedSentence:
+    chunk = Chunk(
+        chunk_id=f"v{version}:tasks/x#c1",
+        doc_id="tasks/x",
+        version=version,
+        title="X",
+        section="X",
+        text=chunk_text,
+    )
+    quote = "Ratcheting accepts updates to invalid objects"
+    start = chunk_text.index(quote)
+    return VerifiedSentence(
+        "Ratcheting accepts updates to invalid objects.",
+        (VerifiedCitation(chunk, quote, start, start + len(quote)),),
+    )
+
+
+def test_stage_note_added_for_a_beta_section() -> None:
+    text = (
+        "FEATURE STATE: Kubernetes v1.30 [beta] (feature gate `CRDValidationRatcheting`)\n\n"
+        "Ratcheting accepts updates to invalid objects as long as the bad parts are unchanged."
+    )
+    notes = stage_notes([_verified(text)])
+    assert len(notes) == 1 and "[beta]" in notes[0].text
+    cite = notes[0].citations[0]
+    assert cite.chunk.text[cite.start : cite.end] == cite.quote
+
+
+def test_no_stage_note_for_stable_or_ambiguous_sections() -> None:
+    body = "Ratcheting accepts updates to invalid objects as long as the bad parts are unchanged."
+    stable = "FEATURE STATE: Kubernetes v1.28 [stable]\n\n" + body
+    two = (
+        "FEATURE STATE: Kubernetes v1.30 [beta]\n\nFEATURE STATE: Kubernetes v1.29 [alpha]\n\n"
+        + body
+    )
+    assert stage_notes([_verified(stable)]) == []
+    assert stage_notes([_verified(two)]) == []

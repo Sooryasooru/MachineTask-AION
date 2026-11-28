@@ -1,5 +1,5 @@
 .RECIPEPREFIX = >
-.PHONY: help setup fetch ingest search ask recall smoke serve eval bench lint format typecheck test check docker-build docker-run clean
+.PHONY: help setup fetch ingest search ask recall smoke serve eval lint format typecheck test check docker-build docker-run clean up
 
 PY ?= python
 
@@ -13,7 +13,6 @@ help:
 > @echo "smoke        run the brief's validation scenarios against a running server"
 > @echo "serve        run the API on PORT (default 8080)"
 > @echo "eval         run the eval and write eval_report.json (LLM replies cached in eval/.llm_cache)"
-> @echo "bench        check GPU, VRAM and model load times"
 > @echo "check        format check, lint, typecheck and tests"
 
 setup:
@@ -42,9 +41,6 @@ serve:
 
 eval:
 > LLM_FALLBACK_MODEL= LLM_CACHE_DIR=$${LLM_CACHE_DIR:-eval/.llm_cache} $(PY) -m eval.run_eval
-
-bench:
-> $(PY) benchmarks/bench_gpu.py
 
 lint:
 > ruff check .
