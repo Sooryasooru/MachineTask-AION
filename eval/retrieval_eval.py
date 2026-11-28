@@ -86,6 +86,24 @@ def main() -> None:
         }
     report["dev_top_scores"] = top_scores(retriever, splits["dev"])
 
+    # Real-user rewrites vs the questions they rewrite: same answers, vaguer wording.
+    rewrites = load_questions(EVAL_DIR / "questions_paraphrase.jsonl")
+    if rewrites:
+        by_qid = {
+            q["qid"]: q
+            for name in ("test", "dev", "postfail")
+            for q in load_questions(EVAL_DIR / f"questions_{name}.jsonl")
+        }
+        originals = [by_qid[q["paraphrase_of"]] for q in rewrites]
+        report["paraphrase"] = {
+            mode: {
+                "original_wording": run_split(retriever, originals, mode),
+                "user_wording": run_split(retriever, rewrites, mode),
+            }
+            for mode in MODES
+        }
+        report["paraphrase_top_scores"] = top_scores(retriever, rewrites)
+
     out = EVAL_DIR / "retrieval_ablation.json"
     out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
@@ -102,6 +120,24 @@ def main() -> None:
     print("\ndev top reranker scores (for the refusal threshold):")
     for row in sorted(report["dev_top_scores"], key=lambda r: -r["top_score"]):
         print(f"  {row['top_score']:.3f}  {row['qid']}  {row['type']}")
+    if "paraphrase" in report:
+        print("\nreal-user rewrites (recall@5 / recall@3): original wording -> user wording")
+        for mode, res in report["paraphrase"].items():
+            o, u = res["original_wording"], res["user_wording"]
+            print(
+                f"  {mode:<15}{o['recall_at_5']:>6} / {o['recall_at_3']:<6} -> "
+                f"{u['recall_at_5']:>6} / {u['recall_at_3']}"
+            )
+        low = [
+            r
+            for r in report["paraphrase_top_scores"]
+            if r["top_score"] < settings.refusal_threshold
+        ]
+        print(f"  rewrites below the refusal threshold ({settings.refusal_threshold}): {len(low)}")
+        print(
+            "  misses (hybrid_rerank):",
+            report["paraphrase"]["hybrid_rerank"]["user_wording"]["misses"],
+        )
     print(f"\nSaved {out}")
 
 
