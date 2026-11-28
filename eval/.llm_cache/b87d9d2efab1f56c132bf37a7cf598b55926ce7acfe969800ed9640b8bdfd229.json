@@ -1,0 +1,27 @@
+{
+  "answerable": true,
+  "sentences": [
+    {
+      "text": "On 1.31, you control supplemental groups by setting the `.spec.securityContext.supplementalGroupsPolicy` field in the Pod spec, which can be `Merge` (the default) or `Strict`.",
+      "citations": [
+        {
+          "chunk_id": "v1.31:tasks/configure-pod-container/security-context#c5",
+          "quote": "The `supplementalGroupsPolicy` field defines the policy for calculating the supplementary groups for the container processes in a pod. There are two valid values for this field: * `Merge`: ... This is the default policy if not specified. * `Strict`: ..."
+        }
+      ]
+    },
+    {
+      "text": "On 1.31, the feature is gated by the `SupplementalGroupsPolicy` feature gate for kubelet and kube-apiserver.",
+      "citations": [
+        {
+          "chunk_id": "v1.31:tasks/configure-pod-container/security-context#c5",
+          "quote": "FEATURE STATE: Kubernetes v1.31 [alpha] (feature gate `SupplementalGroupsPolicy`)"
+        }
+      ]
+    }
+  ],
+  "gaps": [
+    "The 1.27 documentation excerpts do not cover this."
+  ],
+  "missing": ""
+}

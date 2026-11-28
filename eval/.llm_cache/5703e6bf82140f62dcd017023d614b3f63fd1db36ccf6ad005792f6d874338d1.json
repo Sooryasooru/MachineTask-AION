@@ -1,0 +1,1 @@
+{"answerable":false,"sentences":[],"gaps":[],"missing":"The excerpts provide the default value for `.spec.strategy.rollingUpdate.maxSurge` (25%) but do not state the default for `.spec.strategy.rollingUpdate.maxUnavailable` for a Deployment rolling update."}

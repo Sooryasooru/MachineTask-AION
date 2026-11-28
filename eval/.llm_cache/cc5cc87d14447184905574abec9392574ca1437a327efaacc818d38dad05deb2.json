@@ -1,0 +1,1 @@
+{"answerable":true,"sentences":[{"text":"Kubernetes ships with the `system-cluster-critical` and `system-node-critical` PriorityClasses.","citations":[{"chunk_id":"v1.27:concepts/scheduling-eviction/pod-priority-preemption#c2","quote":"Kubernetes already ships with two PriorityClasses:\n`system-cluster-critical` and `system-node-critical`."}]}],"gaps":[],"missing":null}

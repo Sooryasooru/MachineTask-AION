@@ -1,0 +1,6 @@
+{
+  "answerable": false,
+  "sentences": [],
+  "gaps": [],
+  "missing": "The excerpts do not mention any RAM requirements or recommendations for etcd, regardless of cluster size."
+}

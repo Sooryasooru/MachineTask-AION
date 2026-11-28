@@ -1,0 +1,3 @@
+[
+{"answerable":true,"sentences":[{"text":"On 1.31, you add a new ServiceCIDR object with `apiVersion: networking.k8s.io/v1beta1`, `kind: ServiceCIDR`, and a `spec.cidrs` list containing the additional CIDR range, then apply it with `kubectl apply -f -` to extend the Service IP range.","citations":[{"chunk_id":"v1.31:tasks/network/extend-service-ip-ranges#c3","quote":"apiVersion: networking.k8s.io/v1beta1\nkind: ServiceCIDR\nmetadata:\n  name: newcidr1\nspec:\n  cidrs:\n  - 10.96.0.0/24"}]}]},{"gaps":["The 1.27 documentation excerpts do not cover this."],"missing":""}
+]

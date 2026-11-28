@@ -1,0 +1,6 @@
+{
+  "answerable": false,
+  "sentences": [],
+  "gaps": [],
+  "missing": "The excerpts do not mention any uptime SLA for the Kubernetes API server."
+}

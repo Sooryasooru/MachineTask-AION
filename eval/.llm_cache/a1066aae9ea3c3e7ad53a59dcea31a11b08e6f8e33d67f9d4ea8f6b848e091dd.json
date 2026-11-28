@@ -1,0 +1,1 @@
+{"answerable":true,"sentences":[{"text":"A ConfigMap cannot exceed 1 MiB.","citations":[{"chunk_id":"v1.27:concepts/configuration/configmap#c2","quote":"The data stored in a ConfigMap cannot exceed 1 MiB"}]}],"gaps":[],"missing":null}

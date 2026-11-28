@@ -1,0 +1,1 @@
+{"answerable":true,"sentences":[{"text":"On 1.27, the default `node-monitor-grace-period` is 40 seconds.","citations":[{"chunk_id":"v1.27:concepts/architecture/nodes#c8","quote":"`node-monitor-grace-period` (default is 40 seconds)"}]}],"gaps":["The 1.31 documentation excerpts do not cover this."],"missing":null}
