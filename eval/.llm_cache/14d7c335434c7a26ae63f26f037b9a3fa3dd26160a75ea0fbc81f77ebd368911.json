@@ -1,0 +1,1 @@
+{"query":"kubectl drain node --ignore-daemonsets --delete-local-data"}
