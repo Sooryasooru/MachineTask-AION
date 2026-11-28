@@ -6,8 +6,9 @@ A citation survives only if:
      markdown backticks/asterisks, but the quote returned to the caller is always
      the chunk's own original text, so it is an exact substring by construction.
 
-A sentence survives only if it keeps at least one citation, and every number it
-states and every maturity word (alpha, beta, stable...) appears in the cited text.
+A sentence survives only if it keeps at least one citation, every number it states
+and every maturity word (alpha, beta, stable...) appears in the cited text, and any
+release it names (1.27, v1.31...) is one it cites or one its cited text mentions.
 Those two are the claims that matter most here ("two" vs "three", "beta" vs
 "stable"), and plain string checks catch them reliably. An NLI support check was
 tried and removed; see docs/evaluation.md.
@@ -178,6 +179,14 @@ def stages_in(text: str) -> set[str]:
     return {"stable" if f in ("ga", "generally available") else f for f in found}
 
 
+_RELEASE_RE = re.compile(r"\bv?(1\.\d{1,2})\b")
+
+
+def releases_in(text: str) -> set[str]:
+    """Kubernetes releases named in the text: 'v1.31' and '1.31' both give '1.31'."""
+    return set(_RELEASE_RE.findall(text))
+
+
 def strip_version_prefix(sentence: str) -> str:
     """'On 1.31, the kubelet...' -> 'the kubelet...', so the release is not read as a number."""
     return _VERSION_PREFIX_RE.sub("", sentence).strip()
@@ -233,8 +242,11 @@ def validate_with_report(
             continue
         cited_text = " ".join(_cited_context(c) for c in cites)
         claim = strip_version_prefix(sentence.text)
+        allowed_releases = {c.chunk.version for c in cites} | releases_in(cited_text)
         if not numbers_in(claim) <= numbers_in(cited_text):
             reason = "number not in cited text"
+        elif not releases_in(claim) <= allowed_releases:
+            reason = "names a release it doesn't cite"
         elif not stages_in(claim) <= stages_in(cited_text):
             reason = "maturity not in cited text"
         else:

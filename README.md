@@ -32,7 +32,7 @@ On every set, including the 36 test questions from week one (now **94.4%**, 9 of
 version questions), nothing that should be refused was answered, and no good
 question was refused.
 Where it still falls short: some answers are correct but leave out a detail, and
-one (G-05) says more than its quote supports. Both are explained below.
+one (G-05) said more than its quote supports. Both are explained below.
 
 **How it got there.** Week one built and measured it in three runs. Week two, after
 a first review, removed what didn't earn its place and fixed what the misses showed,
@@ -156,7 +156,9 @@ AI's quote is nearly but not exactly word for word (a dropped word, two lines
 joined), it's aligned to the closest real text, but only when at least 90% similar
 and stating the same numbers and stages. If it glued two passages together with
 "..." or swapped two sentences, the longest piece that is found word for word is
-kept. The quote you see is always the documentation's own text.
+kept. The quote you see is always the documentation's own text. And a sentence may
+only name a release (1.27, 1.31) that it cites or that its quoted text mentions, so
+a 1.27 passage can't be used to say something about 1.31.
 
 **A second chance, without losing anything.** Sometimes checking throws away a
 right answer: the passage the AI saw was cut at 1,000 characters (T-28's answer sat
@@ -279,8 +281,11 @@ switched to a smaller one (1.2 seconds).
 1. **G-05, selectable fields for custom resources (unseen).** The 1.31 part is right.
    But the 1.27 sentence mentions `selectableFields` and "enabled by default in 1.31",
    and the 1.27 passage it cites says neither. The quote is real, so the checker let it
-   through; the sentence says more than its quote. It's also missing "beta". This is the
-   system's main weakness: quotes are verified, the claim around them isn't fully.
+   through; the sentence says more than its quote. It's also missing "beta". I added a
+   rule after this: a sentence may only name a release it cites or its quote mentions.
+   It now drops that sentence, and nothing else in any of the 89 questions. It came from
+   reading holdout2, so holdout2's numbers are from before it. The wider weakness stays:
+   quotes are verified, the rest of a sentence isn't fully.
 2. **T-35, encryption at rest.** Correct and quoted, but it doesn't name
    `--encryption-provider-config`, which the expected answer requires.
 3. **T-36, pinning a Pod to a node.** Right in substance (label the node, use
@@ -316,8 +321,8 @@ normal format. Rebuilding the index gives identical files every time.
 ## Known issues
 
 - **A sentence can say more than its quote.** The checker confirms the quote is real
-  and that numbers and maturity words match, but not every other detail in the
-  sentence (G-05).
+  and that numbers, maturity words and release names match, but not every other
+  detail in the sentence (G-05 was caught by the release rule; others might not be).
 - **Some answers are correct but incomplete.** They leave out a flag, command or
   second limit the question needed (T-35, T-36, D-10, H-15).
 - **Absence statements have no citation.** A line like "The 1.27 documentation

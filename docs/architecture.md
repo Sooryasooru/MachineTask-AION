@@ -42,6 +42,9 @@ For each proposed sentence:
   the model spliced two passages with "..." or swapped two sentences, the longest
   piece found word for word (6+ words) is kept. Either way, the quote that's returned
   is cut from the chunk's own text, so it's always an exact substring.
+- **Release names.** A sentence may only name a release (1.27, v1.31) that it cites
+  or that its cited text mentions, so one release's passage can't back a claim about
+  the other.
 - **Numbers and maturity.** Every number and every maturity word (alpha, beta,
   stable, deprecated, GA) in the sentence must appear in the cited text. These are
   exactly what differs between releases.

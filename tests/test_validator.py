@@ -2,7 +2,7 @@
 
 from rag.chunker import Chunk
 from rag.generator import DraftCitation, DraftSentence, parse_reply
-from rag.validator import locate_quote, numbers_in, validate
+from rag.validator import locate_quote, numbers_in, validate, validate_with_report
 
 CHUNK = Chunk(
     chunk_id="v1.31:releases/skew#c2",
@@ -174,3 +174,39 @@ def test_spliced_quote_with_no_real_piece_is_rejected() -> None:
 def test_markdown_italics_are_ignored_when_matching() -> None:
     text = "Components select a leader via _coordinated leader election_ during upgrades."
     assert locate_quote(text, "select a leader via coordinated leader election") is not None
+
+
+def test_sentence_about_another_release_needs_that_release_cited() -> None:
+    text = "Field selectors are essentially resource filters. By default, no selectors apply."
+    chunk = Chunk(
+        chunk_id="v1.27:concepts/x#c1",
+        doc_id="concepts/x",
+        version="1.27",
+        title="Field selectors",
+        section="Field selectors",
+        text=text,
+    )
+    quote = "Field selectors are essentially resource filters."
+    leaky = sentence(
+        "On 1.27, custom resources get selectable fields, enabled by default in 1.31.",
+        quote,
+        chunk.chunk_id,
+    )
+    honest = sentence("On 1.27, field selectors are resource filters.", quote, chunk.chunk_id)
+    kept, verdicts = validate_with_report([leaky, honest], {chunk.chunk_id: chunk})
+    assert [k.text for k in kept] == [honest.text]
+    assert verdicts[0]["reason"] == "names a release it doesn't cite"
+
+
+def test_release_named_in_the_cited_text_is_allowed() -> None:
+    text = "KMS v1 is deprecated (since Kubernetes v1.28) and disabled by default."
+    chunk = Chunk(
+        chunk_id="v1.31:tasks/kms#c1",
+        doc_id="tasks/kms",
+        version="1.31",
+        title="KMS",
+        section="KMS",
+        text=text,
+    )
+    s = sentence("On 1.31, KMS v1 is deprecated since v1.28.", text, chunk.chunk_id)
+    assert len(validate([s], {chunk.chunk_id: chunk})) == 1
