@@ -185,7 +185,22 @@ class Retriever:
         versions = [version] if version in self.versions else self.versions
         vector = None if mode == "bm25" else self.embed_query(query)
         by_version = {v: self._search_version(query, vector, v, top_k, mode) for v in versions}
+        return self._grouped(by_version)
 
+    def merge(self, first: Retrieval, second: Retrieval, top_k: int) -> Retrieval:
+        """Union of two results per version: best score per chunk, top k kept."""
+        by_version: dict[str, list[Hit]] = {}
+        for v in first.by_version.keys() | second.by_version.keys():
+            best: dict[str, Hit] = {}
+            for hit in first.by_version.get(v, []) + second.by_version.get(v, []):
+                seen = best.get(hit.chunk.chunk_id)
+                if seen is None or hit.score > seen.score:
+                    best[hit.chunk.chunk_id] = hit
+            ranked = sorted(best.values(), key=lambda h: (-h.score, h.chunk.chunk_id))
+            by_version[v] = ranked[:top_k]
+        return self._grouped(dict(sorted(by_version.items())))
+
+    def _grouped(self, by_version: dict[str, list[Hit]]) -> Retrieval:
         pairs: dict[str, dict[str, list[Hit]]] = {}
         for v, hits in by_version.items():
             for hit in hits:

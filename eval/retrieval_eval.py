@@ -18,6 +18,7 @@ from typing import Any
 from app.config import settings
 from eval.metrics import gold_hit, gold_hit_every_version, load_questions, percentile, rate
 from rag.retriever import Mode, Retrieval, load_default_retriever
+from rag.rewrite import RewriteFn, retrieve_with_rewrite, rewrite_query
 
 MODES: tuple[Mode, ...] = ("bm25", "dense", "hybrid", "hybrid_rerank")
 EVAL_DIR = Path(__file__).parent
@@ -30,14 +31,26 @@ def first_k(result: Retrieval, k: int) -> Retrieval:
     return Retrieval(by_version={v: hits[:k] for v, hits in result.by_version.items()})
 
 
-def run_split(retriever: Any, questions: list[dict[str, Any]], mode: Mode) -> dict[str, Any]:
-    """recall@5, both-version recall on conflicts, misses and latency for one split."""
-    hits, hits3, both, latencies, misses = [], [], [], [], []
+def run_split(
+    retriever: Any, questions: list[dict[str, Any]], mode: Mode, rewrite: RewriteFn | None = None
+) -> dict[str, Any]:
+    """recall@5, both-version recall on conflicts, misses and latency for one split.
+
+    With `rewrite`, weak searches (hybrid_rerank only) also try a rewritten query.
+    """
+    hits, hits3, both, latencies, misses, rewritten = [], [], [], [], [], []
     for q in questions:
         if not q["gold_docs"]:
             continue
         start = time.perf_counter()
-        result = retriever.retrieve(q["question"], top_k=TOP_K, mode=mode)
+        if rewrite is not None:
+            result, query = retrieve_with_rewrite(
+                retriever, q["question"], TOP_K, None, rewrite, settings.rewrite_below
+            )
+            if query:
+                rewritten.append(q["qid"])
+        else:
+            result = retriever.retrieve(q["question"], top_k=TOP_K, mode=mode)
         latencies.append((time.perf_counter() - start) * 1000)
         hit = gold_hit(q["gold_docs"], result, retriever.aliases)
         hits.append(hit)
@@ -52,6 +65,7 @@ def run_split(retriever: Any, questions: list[dict[str, Any]], mode: Mode) -> di
         "conflict_both_versions_at_5": rate(both),
         "answerable_questions": len(hits),
         "misses": misses,
+        "rewritten": rewritten,
         "p95_retrieval_ms": round(percentile(latencies, 95)),
     }
 
@@ -87,22 +101,33 @@ def main() -> None:
     report["dev_top_scores"] = top_scores(retriever, splits["dev"])
 
     # Real-user rewrites vs the questions they rewrite: same answers, vaguer wording.
-    rewrites = load_questions(EVAL_DIR / "questions_paraphrase.jsonl")
-    if rewrites:
-        by_qid = {
-            q["qid"]: q
-            for name in ("test", "dev", "postfail")
-            for q in load_questions(EVAL_DIR / f"questions_{name}.jsonl")
-        }
+    # paraphrase was used to build the query-rewrite step; paraphrase2 was frozen first.
+    by_qid = {
+        q["qid"]: q
+        for path in sorted(EVAL_DIR.glob("questions_*.jsonl"))
+        if "paraphrase" not in path.name
+        for q in load_questions(path)
+    }
+    rewrite = rewrite_query if settings.rewrite_model else None
+    for name in ("paraphrase", "paraphrase2"):
+        rewrites = load_questions(EVAL_DIR / f"questions_{name}.jsonl")
+        if not rewrites:
+            continue
         originals = [by_qid[q["paraphrase_of"]] for q in rewrites]
-        report["paraphrase"] = {
+        modes: dict[str, Any] = {
             mode: {
                 "original_wording": run_split(retriever, originals, mode),
                 "user_wording": run_split(retriever, rewrites, mode),
             }
             for mode in MODES
         }
-        report["paraphrase_top_scores"] = top_scores(retriever, rewrites)
+        if rewrite is not None:
+            modes["hybrid_rerank+rewrite"] = {
+                "original_wording": run_split(retriever, originals, "hybrid_rerank", rewrite),
+                "user_wording": run_split(retriever, rewrites, "hybrid_rerank", rewrite),
+            }
+        report[name] = modes
+        report[f"{name}_top_scores"] = top_scores(retriever, rewrites)
 
     out = EVAL_DIR / "retrieval_ablation.json"
     out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -120,23 +145,26 @@ def main() -> None:
     print("\ndev top reranker scores (for the refusal threshold):")
     for row in sorted(report["dev_top_scores"], key=lambda r: -r["top_score"]):
         print(f"  {row['top_score']:.3f}  {row['qid']}  {row['type']}")
-    if "paraphrase" in report:
-        print("\nreal-user rewrites (recall@5 / recall@3): original wording -> user wording")
-        for mode, res in report["paraphrase"].items():
+    for name in ("paraphrase", "paraphrase2"):
+        if name not in report:
+            continue
+        print(f"\n{name}: recall@5 / recall@3, original wording -> user wording")
+        for mode, res in report[name].items():
             o, u = res["original_wording"], res["user_wording"]
             print(
-                f"  {mode:<15}{o['recall_at_5']:>6} / {o['recall_at_3']:<6} -> "
+                f"  {mode:<22}{o['recall_at_5']:>6} / {o['recall_at_3']:<6} -> "
                 f"{u['recall_at_5']:>6} / {u['recall_at_3']}"
             )
         low = [
-            r
-            for r in report["paraphrase_top_scores"]
-            if r["top_score"] < settings.refusal_threshold
+            r for r in report[f"{name}_top_scores"] if r["top_score"] < settings.refusal_threshold
         ]
-        print(f"  rewrites below the refusal threshold ({settings.refusal_threshold}): {len(low)}")
+        print(f"  below the refusal threshold without rewrite: {len(low)}")
+        if "hybrid_rerank+rewrite" in report[name]:
+            rw = report[name]["hybrid_rerank+rewrite"]
+            print(f"  rewrites triggered: user wording {rw['user_wording']['rewritten']}")
+            print(f"                      original wording {rw['original_wording']['rewritten']}")
         print(
-            "  misses (hybrid_rerank):",
-            report["paraphrase"]["hybrid_rerank"]["user_wording"]["misses"],
+            "  misses (best mode):", report[name][list(report[name])[-1]]["user_wording"]["misses"]
         )
     print(f"\nSaved {out}")
 

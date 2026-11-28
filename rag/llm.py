@@ -39,7 +39,7 @@ def _cache_path(payload: dict[str, Any]) -> Path | None:
     return Path(settings.llm_cache_dir) / f"{key}.json"
 
 
-def _call_model(model: str, messages: list[dict[str, str]], attempts: int) -> str:
+def call_model(model: str, messages: list[dict[str, str]], attempts: int) -> str:
     """One model, with retries on rate limits and server errors."""
     payload: dict[str, Any] = {
         "model": model,
@@ -98,9 +98,9 @@ def chat_json(messages: list[dict[str, str]]) -> str:
     """
     fallback = settings.llm_fallback_model
     if not fallback or fallback == settings.llm_model:
-        return _call_model(settings.llm_model, messages, MAX_ATTEMPTS)
+        return call_model(settings.llm_model, messages, MAX_ATTEMPTS)
     try:
-        return _call_model(settings.llm_model, messages, FALLBACK_AFTER)
+        return call_model(settings.llm_model, messages, FALLBACK_AFTER)
     except LLMError as err:
         log.warning("main model failed (%s); trying fallback %s", err, fallback)
-        return _call_model(fallback, messages, MAX_ATTEMPTS)
+        return call_model(fallback, messages, MAX_ATTEMPTS)

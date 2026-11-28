@@ -30,6 +30,7 @@ from rag.refusal import (
     clean_question,
 )
 from rag.retriever import Hit, Retrieval, Retriever, tokenize
+from rag.rewrite import RewriteFn, retrieve_with_rewrite, rewrite_query
 from rag.validator import (
     VerifiedCitation,
     VerifiedSentence,
@@ -84,6 +85,7 @@ class Pipeline:
     llm: LlmFn
     known_terms: set[str]
     vocabulary: set[str] = field(default_factory=set)
+    rewrite: RewriteFn | None = None
 
     def __post_init__(self) -> None:
         if not self.vocabulary:
@@ -145,6 +147,15 @@ class Pipeline:
         extra = [k for k in kept2 if kept_releases([k]) <= lost]
         trace["retry"]["added"] = len(extra)
         return draft, kept + extra
+
+    def search(self, question: str, k: int, pinned: str | None, trace: Trace) -> Retrieval:
+        """Retrieve, rewriting the query first if search is weak (see rag/rewrite.py)."""
+        result, rewritten = retrieve_with_rewrite(
+            self.retriever, question, k, pinned, self.rewrite, settings.rewrite_below
+        )
+        if rewritten:
+            trace["rewritten_query"] = rewritten
+        return result
 
     def ask(self, raw_question: object, top_k: object = 5, version: object = None) -> AskResponse:
         """Answer, or refuse with a reason. Never raises."""
@@ -255,7 +266,7 @@ class Pipeline:
         if early:
             return refuse(early)
 
-        result = self.retriever.retrieve(question, top_k=k, version=pinned)
+        result = self.search(question, k, pinned, trace)
         trace["top_score"] = round(result.top_score(), 4)
         weak = check_retrieval(result.top_score(), settings.refusal_threshold)
         if weak:
@@ -447,7 +458,12 @@ def load_default_pipeline() -> Pipeline:
     from rag.retriever import load_default_retriever
 
     retriever = load_default_retriever(settings.index_dir)
-    return Pipeline(retriever, chat_json, load_known_terms(settings.index_dir))
+    return Pipeline(
+        retriever,
+        chat_json,
+        load_known_terms(settings.index_dir),
+        rewrite=rewrite_query if settings.rewrite_model else None,
+    )
 
 
 def main() -> None:
