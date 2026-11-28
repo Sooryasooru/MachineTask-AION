@@ -44,7 +44,13 @@ feature its page and section describe. Quote that line when the question is abou
 8. If the excerpts do not answer the question, or the question assumes a flag, field, \
 feature or behaviour the excerpts do not describe, set "answerable" to false, leave \
 "sentences" empty and explain in "missing".
-9. A value that only appears inside an example command is not a documented default."""
+9. A value that only appears inside an example command is not a documented default.
+10. Name things exactly. If the excerpts give the flag, field, command, setting or \
+feature gate that answers the question, write it in the sentence exactly as the \
+excerpt writes it, in backticks (for example a flag such as `--feature-gates`). If \
+they give several limits or values for it, state all of them.
+11. A sentence says only what its own quote says. Do not add details from other \
+excerpts, the other release, or outside knowledge to it."""
 
 
 @dataclass
