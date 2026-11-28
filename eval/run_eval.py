@@ -36,7 +36,7 @@ from rag.pipeline import Pipeline, load_default_pipeline
 
 ROOT = Path(__file__).resolve().parent.parent
 EVAL_DIR = ROOT / "eval"
-SPLITS = ("test", "dev", "holdout", "holdout2")
+SPLITS = ("test", "dev", "holdout", "holdout2", "holdout3")
 SHOULD_REFUSE = {"unanswerable", "false_premise"}
 MARKER_RE = re.compile(r"\[[^\]]*#c\d+\]")
 
