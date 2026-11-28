@@ -1,0 +1,1 @@
+{"answerable":true,"sentences":[{"text":"The default port range for NodePort Services is 30000-32767.","citations":[{"chunk_id":"v1.27:concepts/services-networking/service#c15","quote":"allocates a port from a range specified by `--service-node-port-range` flag (default: 30000-32767)"}]}],"gaps":[],"missing":null}
